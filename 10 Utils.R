@@ -22,7 +22,7 @@ suppressMessages(library(nanotime))
 
 # Download historical trade data for selected pair using initial id ------------
 hist_trades_pair <- function(sleep, hist_id, pair){
-  repeat{
+  repeat {
     Sys.sleep(sleep)
     what <- tryCatch(
       {
@@ -36,7 +36,7 @@ hist_trades_pair <- function(sleep, hist_id, pair){
     temp <- cbind(data.frame(dat$result[1]), dat$result$last)
     hist_id <- dat$result$last
     file <- paste0(paste(pair_data_results, pair, sep = "/"), ".csv")
-    write.table(temp, file, sep =",", row.names = FALSE,
+    write.table(temp, file, sep = ",", row.names = FALSE,
                 col.names = FALSE,
                 append = TRUE)
     print(Sys.time())
@@ -54,10 +54,10 @@ plot_candlesticks <- function(dta, Ns, asset){
   xs <- c(1:nrow(dta))
   color_list <- ifelse(dta$close >= dta$open, "green", "red")
   
-  plot(dta$high, main = asset, xaxt ="n", xlab ="", ylab = "price", ylim = c(mn, mx), type = "n")
+  plot(dta$high, main = asset, xaxt = "n", xlab = "", ylab = "price", ylim = c(mn, mx), type = "n")
   par(new = T)
   plot(dta$low, main = "", axes = F, xlab = "", ylab = "", ylim = c(mn, mx), type = "n")
-  segments(x0 = xs, y0= dta$open, x1 = xs, y1 = dta$close, col = color_list, lwd = 4)
+  segments(x0 = xs, y0 = dta$open, x1 = xs, y1 = dta$close, col = color_list, lwd = 4)
   segments(x0 = xs, y0= dta$low, x1 = xs, y1 = dta$high, col = color_list, lwd = 1)
   # axis(1, at = xs, labels = dta$time, las = 2)
 }
@@ -73,10 +73,8 @@ SR_lines <- function(roll, data, plot.it){
     resistance_act <- min(resistance, na.rm = T)
   
   } else if(all(last_close > resistance)){
-    
     resistance_act <- max(resistance, na.rm =T)
-    
-      
+  
   } else {
     resistance_act <- min(resistance[-which(resistance < last_close)], na.rm = T)
   }
@@ -85,10 +83,9 @@ SR_lines <- function(roll, data, plot.it){
   support <- support[!is.na(support)]
   
   if (length(which(support > last_close)) == 0) {
-    support_act <- max(support, na.rm =T)
+    support_act <- max(support, na.rm = T)
     
   } else if(all(last_close < support)){
-    
     support_act <- min(support, na.rm =T)
     
   } else {
@@ -96,16 +93,268 @@ SR_lines <- function(roll, data, plot.it){
   }
   if(plot.it == TRUE){
     plot_candlesticks(dta = data, Ns = nrow(data), asset = pair)
-    abline(h = resistance_act, col ="lightblue")
-    abline(h = support_act, col ="black")
+    abline(h = resistance_act, col = "lightblue")
+    abline(h = support_act, col = "black")
   }
   return(list(SL = support_act, RL = resistance_act))
 }
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#                                   Add standard order
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# Inputs -----------------------------------------------------------------------
+# pair = asset pair
+# type = type of order (buy/sell)
+# ordertype = order type:
+#   market
+# limit (price = limit price)
+# stop-loss (price = stop loss price)
+# take-profit (price = take profit price)
+# stop-loss-profit (price = stop loss price, price2 = take profit price)
+# stop-loss-profit-limit (price = stop loss price, price2 = take profit price)
+# stop-loss-limit (price = stop loss trigger price, price2 = triggered limit price)
+# take-profit-limit (price = take profit trigger price, price2 = triggered limit price)
+# trailing-stop (price = trailing stop offset)
+# trailing-stop-limit (price = trailing stop offset, price2 = triggered limit offset)
+# stop-loss-and-limit (price = stop loss price, price2 = limit price)
+# settle-position
+# price = price (optional.  dependent upon ordertype)
+# price2 = secondary price (optional.  dependent upon ordertype)
+# volume = order volume in lots
+# leverage = amount of leverage desired (optional.  default = none)
+# oflags = comma delimited list of order flags (optional):
+#   viqc = volume in quote currency (not available for leveraged orders)
+# fcib = prefer fee in base currency
+# fciq = prefer fee in quote currency
+# nompp = no market price protection
+# post = post only order (available when ordertype = limit)
+# starttm = scheduled start time (optional):
+#   0 = now (default)
+# +<n> = schedule start time <n> seconds from now
+# <n> = unix timestamp of start time
+# expiretm = expiration time (optional):
+#   0 = no expiration (default)
+# +<n> = expire <n> seconds from now
+# <n> = unix timestamp of expiration time
+# userref = user reference id.  32-bit signed number.  (optional)
+# validate = validate inputs only.  do not submit order (optional)
+# optional closing order to add to system when order gets filled:
+#   close[ordertype] = order type
+# close[price] = price
+# close[price2] = secondary price
+
+# Values -----------------------------------------------------------------------
+# descr = order description info
+# order = order description
+# close = conditional close order description (if conditional close set)
+# txid = array of transaction ids for order (if order was added successfully)
+# url      <- "https://api.kraken.com/0/private/AddOrder"
+# type <- "sell"
+# ordertype <- "market"
+# volume <- 0.1
+
+add_market_order <- function(url, key, secret, pair, type, ordertype, volume) {
+  
+  nonce <- as.character(as.numeric(Sys.time()) * 1000000)
+  post_data <- paste0("nonce=", nonce, "&pair=", pair, "&type=", type, "&ordertype=", ordertype,
+                      "&volume=", volume)
+  method_path <- gsub("^.*?kraken.com", "", url)
+  sign <- hmac(key =  RCurl::base64Decode(secret, mode = "raw"), 
+               object = c(charToRaw(method_path), digest(object = paste0(nonce, 
+                                                                         post_data), algo = "sha256", serialize = FALSE, 
+                                                         raw = TRUE)), algo = "sha512", raw = TRUE)
+  httpheader <- c(`API-Key` = key, `API-Sign` =  RCurl::base64Encode(sign))
+  
+  curl <- RCurl::getCurlHandle(useragent = paste("Rbitcoin", packageVersion("Rbitcoin")))
+  query_result_json <- rawToChar(RCurl::getURLContent(curl = curl, 
+                                                      url = url, binary = TRUE, postfields = post_data, 
+                                                      httpheader = httpheader))
+  query_result <- jsonlite::fromJSON(query_result_json)
+  
+  return(query_result)
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#                                   Trade Balance
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# Inputs -----------------------------------------------------------------------
+# aclass = asset class (optional):  currency (default, always currency)
+# asset = base asset used to determine balance (default = ZUSD)
+
+# Values -----------------------------------------------------------------------
+# eb = equivalent balance (combined bbalancealance of all currencies)
+# tb = trade balance (combined  of all equity currencies)
+# m = margin amount of open positions
+# n = unrealized net profit/loss of open positions
+# c = cost basis of open positions
+# v = current floating valuation of open positions
+# e = equity = trade balance + unrealized net profit/loss
+# mf = free margin = equity - initial margin (maximum margin available to open new positions)
+# ml = margin level = (equity / initial margin) * 100
+# url      <- "https://api.kraken.com/0/private/Balance"
+
+get_balance <- function (url, key, secret) {
+  
+  nonce <- as.character(as.numeric(Sys.time()) * 1000000)
+  post_data <- paste0("nonce=", nonce)
+  method_path <- gsub("^.*?kraken.com", "", url)
+  sign <- hmac(key =  RCurl::base64Decode(secret, mode = "raw"), 
+               object = c(charToRaw(method_path), digest(object = paste0(nonce, 
+                                                                         post_data), algo = "sha256", serialize = FALSE, 
+                                                         raw = TRUE)), algo = "sha512", raw = TRUE)
+  httpheader <- c(`API-Key` = key, `API-Sign` =  RCurl::base64Encode(sign))
+  
+  curl <- RCurl::getCurlHandle(useragent = paste("Rbitcoin", packageVersion("Rbitcoin")))
+  query_result_json <- rawToChar(RCurl::getURLContent(curl = curl, 
+                                                      url = url, binary = TRUE, postfields = post_data, 
+                                                      httpheader = httpheader))
+  query_result <- jsonlite::fromJSON(query_result_json)
+  
+  return(query_result)
+}
+
+
+# Strategy using volumes spikes and RSI oversold conditions
+Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprofit, stoploss_trail,stoploss_ult, times_vol) {
+  
+  # Train and test datasets
+  train_data[, c("SMA",
+                 "RSI",
+                 "EMA_volume",
+                 "exit_value",
+                 "exit_condition",
+                 "crossover_volume",
+                 "crossover_RSI",
+                 "Slope",
+                 "action",
+                 "Units",
+                 "Price",
+                 "tp",
+                 "ult_sl",
+                 "trail_sl",
+                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+  
+  test_data[, c("SMA",
+                "RSI",
+                "EMA_volume",
+                "exit_value",
+                "exit_condition",
+                "crossover_volume",
+                "crossover_RSI",
+                "Slope",
+                "action",
+                "Units",
+                "Price",
+                "tp",
+                "ult_sl",
+                "trail_sl",
+                "id") := list(NA, NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+  
+  # Going intro the loop for test data -----------------------------------------
+  for (i in 1:nrow(test_data)){
+    
+    fut <- rbind(train_data, test_data[i, ])
+    
+    # RSI and Volume
+    fut$RSI <- RSI(fut$close, n = RSI_Period)
+    fut$EMA_volume <- EMA(fut$volume, n = EMA_volume)
+
+    # Volume Crossing of volume over the SMA(volume, n_periods)
+    fut$crossover_volume[nrow(fut)] <- ifelse(fut$volume[nrow(fut)] > fut$EMA_volume[nrow(fut)] * times_vol ,
+                                              "volume_higher", "volume_lower")
+    # RSI Crossing of upper or lower bounds
+    fut$crossover_RSI[nrow(fut)] <- ifelse(fut$RSI[nrow(fut)] < RSI_below ,
+                                           "RSI_lower", "RSI_higher")
+    
+    # Exit condition for takeprofit  - Fixed
+    tp <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) + takeprofit * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
+    
+    if (length(tp) == 0) {
+      tp <- 0
+    }
+    
+    # Ultimate stop loss
+    ult_sl <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) - stoploss_ult * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
+    
+    if (length(ult_sl) == 0) {
+      ult_sl <- 0
+    }
+    
+    
+    # Trailing stop loss
+    if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] > fut$close[nrow(fut)-1] )  ){
+      
+      trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
+      if( trail_sl < tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)){
+        trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
+        
+      } else {
+        trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
+        }
+      
+    } else if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] <= fut$close[nrow(fut)-1] ) ){
+      trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
+    
+    } else {
+      trail_sl <-0
+    }
+    
+    if(length(trail_sl) == 0 ){
+      
+      trail_sl <- 0
+    }
+    
+    fut$tp[nrow(fut)] <- tp
+    fut$ult_sl[nrow(fut)] <- ult_sl
+    fut$trail_sl[nrow(fut)] <- trail_sl
+    
+    
+    fut$exit_condition[nrow(fut)] <- fut$trail_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$ult_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$tp[nrow(fut)] < fut$close[nrow(fut)]
+    
+    
+    # Deciding upon action -----------------------------------------------------
+    
+    # Buy condition
+    if ( (is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("sell", "no action")) &
+         fut$crossover_volume[nrow(fut)] == "volume_higher" &  fut$crossover_RSI[nrow(fut)] == "RSI_lower") {
+      
+      fut$action[nrow(fut)] <- "buy"
+      fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
+      fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)]
+      fut$id[nrow(fut)] <- round(runif(1, 10000, 5000000))
+      
+      # Sell condition
+    } else if (fut$action[nrow(fut) - 1] %in% c("keep", "buy") & (
+      fut$exit_condition[nrow(fut)] == TRUE  )) {
+      
+      fut$action[nrow(fut)] <- "sell"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
+      fut$Price[nrow(fut)] <- fut$close[nrow(fut)]* fut$Units[nrow(fut)]
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      initial_budget <- fut$Price[nrow(fut)]
+      
+      # Keep condition
+    } else if ( fut$action[nrow(fut) - 1] %in% c("buy", "keep")   & 
+                fut$exit_condition[nrow(fut)] == FALSE  ) {
+      
+      fut$action[nrow(fut)] <- "keep"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1 ]
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      
+    } else {
+      
+      fut$action[nrow(fut)] <- "no action"
+      
+    }
+    
+    train_data <- fut
+    print(i)
+  }
+  return(train_data)
+}
 
 # Indicator trading ------------------------------------------------------------
 # MACD crossover going long
-
 MACD_long <- function(EMA_Trend, nfast, nslow, nsig, stoploss, takeprofit) {
   
   # Train and test datasets
@@ -173,9 +422,7 @@ MACD_long <- function(EMA_Trend, nfast, nslow, nsig, stoploss, takeprofit) {
     
     fut$exit_value[nrow(fut)] <- exit_value
     fut$exit_condition <- fut$exit_value > takeprofit | fut$exit_value <= -stoploss
-    
-    
-    
+
     # Deciding upon action -----------------------------------------------------
     
     # Buy condition
@@ -220,7 +467,7 @@ MACD_long <- function(EMA_Trend, nfast, nslow, nsig, stoploss, takeprofit) {
 
 
 
-# Strategy 000 ------------------------------------------------------------------
+# Strategy  --------------------------------------------------------------------
 
 Volume_candle_patterns <- function(takeprofit, stoploss, SMA_Volume) {
   
@@ -1614,161 +1861,6 @@ Volume_Reversal_RSI_NJ <- function(stoploss, rsi_bound, rsi_period, periods_volu
   return(train_data)
 }
 
-### Best
-Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprofit, stoploss_trail,stoploss_ult, times_vol) {
-  
-  # Train and test datasets
-  train_data[, c("SMA",
-                 "RSI",
-                 "EMA_volume",
-                 "exit_value",
-                 "exit_condition",
-                 "crossover_volume",
-                 "crossover_RSI",
-                 "Slope",
-                 "action",
-                 "Units",
-                 "Price",
-                 "tp",
-                 "ult_sl",
-                 "trail_sl",
-                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
-  
-  test_data[, c("SMA",
-                "RSI",
-                "EMA_volume",
-                "exit_value",
-                "exit_condition",
-                "crossover_volume",
-                "crossover_RSI",
-                "Slope",
-                "action",
-                "Units",
-                "Price",
-                "tp",
-                "ult_sl",
-                "trail_sl",
-                "id") := list(NA, NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
-  
-  # Going intro the loop for test data -----------------------------------------
-  for (i in 1:nrow(test_data)){
-    
-    fut <- rbind(train_data, test_data[i, ])
-    
-    # RSI and Volume
-    fut$RSI <- RSI(fut$close, n = RSI_Period)
-    fut$EMA_volume <- EMA(fut$volume, n = EMA_volume)
-    # fut$SMA <- SMA(fut$close, n = SMA_slope)
-    
-    # Technical indicators -----------------------------------------------------
-    
-    
-    # Volume Crossing of volume over the SMA(volume, n_periods)
-    fut$crossover_volume[nrow(fut)] <- ifelse(fut$volume[nrow(fut)] > fut$EMA_volume[nrow(fut)] * times_vol ,
-                                              "volume_higher", "volume_lower")
-    
-    
-    # RSI Crossing of upper or lower bounds
-    fut$crossover_RSI[nrow(fut)] <- ifelse(fut$RSI[nrow(fut)] < RSI_below ,
-                                           "RSI_lower", "RSI_higher")
-    
-    # Determine slope
-    # fut$Slope[nrow(fut)] <- tail(fut$SMA, 1)  -fut$SMA[!is.na(fut$SMA)][1]
-    
-    # Exit condition for takeprofit  - Fixed
-    tp <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) + takeprofit * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
-    
-    if (length(tp) == 0) {
-      tp <- 0
-    }
-    
-    # Ultimate stop loss
-    ult_sl <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) - stoploss_ult * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
-    
-    if (length(ult_sl) == 0) {
-      ult_sl <- 0
-    }
-    
-  
-    # Trailing stop loss
-    # browser()
-    if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] > fut$close[nrow(fut)-1] )  ){
-      
-      trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
-      if( trail_sl < tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)){
-        trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
-        
-      }else {
-        trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
-        
-      }
-      
-      
-    } else if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] <= fut$close[nrow(fut)-1] ) ){
-      
-      trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
-    } else {
-      
-      trail_sl <-0
-    }
-    
-    
-    if(length(trail_sl) == 0 ){
-      
-      trail_sl <- 0
-    }
-    # browser()
-    
-    
-    
-    fut$tp[nrow(fut)] <- tp
-    fut$ult_sl[nrow(fut)] <- ult_sl
-    fut$trail_sl[nrow(fut)] <- trail_sl
-
-    
-    fut$exit_condition[nrow(fut)] <- fut$trail_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$ult_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$tp[nrow(fut)] < fut$close[nrow(fut)]
-    
-    
-    # Deciding upon action -----------------------------------------------------
-    
-    # Buy condition
-    if ( (is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("sell", "no action")) &
-         fut$crossover_volume[nrow(fut)] == "volume_higher" &  fut$crossover_RSI[nrow(fut)] == "RSI_lower") {
-      
-      fut$action[nrow(fut)] <- "buy"
-      fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
-      fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)]
-      fut$id[nrow(fut)] <- round(runif(1, 10000, 5000000))
-      
-      # Sell condition
-    } else if (fut$action[nrow(fut) - 1] %in% c("keep", "buy") & (
-      fut$exit_condition[nrow(fut)] == TRUE  )) {
-      
-      fut$action[nrow(fut)] <- "sell"
-      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
-      fut$Price[nrow(fut)] <- fut$close[nrow(fut)]* fut$Units[nrow(fut)]
-      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
-      initial_budget <- fut$Price[nrow(fut)]
-      
-      # Keep condition
-    } else if ( fut$action[nrow(fut) - 1] %in% c("buy", "keep")   & 
-                fut$exit_condition[nrow(fut)] == FALSE  ) {
-      
-      fut$action[nrow(fut)] <- "keep"
-      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1 ]
-      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
-      
-    } else {
-      
-      fut$action[nrow(fut)] <- "no action"
-      
-    }
-    
-    train_data <- fut
-    print(i)
-  }
-  return(train_data)
-}
  
 # Test  ------------------------------------------------------------------------
 Pure_RSI_Volume_Trailing_test <- function(RSI_Period,RSI_above,  RSI_below, EMA_volume, takeprofit, stoploss_trail,stoploss_ult, times_vol) {
@@ -2886,120 +2978,3 @@ portfolio_rsi_reversal <- function(ATR_period, RSI_period, roll_max_period, roll
   }
   return(train_data)
 }
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-#                                   Trade Balance
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Inputs -----------------------------------------------------------------------
-# aclass = asset class (optional):  currency (default, always currency)
-# asset = base asset used to determine balance (default = ZUSD)
-
-# Values -----------------------------------------------------------------------
-# eb = equivalent balance (combined bbalancealance of all currencies)
-# tb = trade balance (combined  of all equity currencies)
-# m = margin amount of open positions
-# n = unrealized net profit/loss of open positions
-# c = cost basis of open positions
-# v = current floating valuation of open positions
-# e = equity = trade balance + unrealized net profit/loss
-# mf = free margin = equity - initial margin (maximum margin available to open new positions)
-# ml = margin level = (equity / initial margin) * 100
-# url      <- "https://api.kraken.com/0/private/Balance"
-
-get_balance <- function (url, key, secret) {
-  
-  nonce <- as.character(as.numeric(Sys.time()) * 1000000)
-  post_data <- paste0("nonce=", nonce)
-  method_path <- gsub("^.*?kraken.com", "", url)
-  sign <- hmac(key =  RCurl::base64Decode(secret, mode = "raw"), 
-               object = c(charToRaw(method_path), digest(object = paste0(nonce, 
-                                                                         post_data), algo = "sha256", serialize = FALSE, 
-                                                         raw = TRUE)), algo = "sha512", raw = TRUE)
-  httpheader <- c(`API-Key` = key, `API-Sign` =  RCurl::base64Encode(sign))
-  
-  curl <- RCurl::getCurlHandle(useragent = paste("Rbitcoin", packageVersion("Rbitcoin")))
-  query_result_json <- rawToChar(RCurl::getURLContent(curl = curl, 
-                                                      url = url, binary = TRUE, postfields = post_data, 
-                                                      httpheader = httpheader))
-  query_result <- jsonlite::fromJSON(query_result_json)
-  
-  return(query_result)
-}
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-#                                   Add standard order
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-# Inputs -----------------------------------------------------------------------
-# pair = asset pair
-# type = type of order (buy/sell)
-# ordertype = order type:
-#   market
-# limit (price = limit price)
-# stop-loss (price = stop loss price)
-# take-profit (price = take profit price)
-# stop-loss-profit (price = stop loss price, price2 = take profit price)
-# stop-loss-profit-limit (price = stop loss price, price2 = take profit price)
-# stop-loss-limit (price = stop loss trigger price, price2 = triggered limit price)
-# take-profit-limit (price = take profit trigger price, price2 = triggered limit price)
-# trailing-stop (price = trailing stop offset)
-# trailing-stop-limit (price = trailing stop offset, price2 = triggered limit offset)
-# stop-loss-and-limit (price = stop loss price, price2 = limit price)
-# settle-position
-# price = price (optional.  dependent upon ordertype)
-# price2 = secondary price (optional.  dependent upon ordertype)
-# volume = order volume in lots
-# leverage = amount of leverage desired (optional.  default = none)
-# oflags = comma delimited list of order flags (optional):
-#   viqc = volume in quote currency (not available for leveraged orders)
-# fcib = prefer fee in base currency
-# fciq = prefer fee in quote currency
-# nompp = no market price protection
-# post = post only order (available when ordertype = limit)
-# starttm = scheduled start time (optional):
-#   0 = now (default)
-# +<n> = schedule start time <n> seconds from now
-# <n> = unix timestamp of start time
-# expiretm = expiration time (optional):
-#   0 = no expiration (default)
-# +<n> = expire <n> seconds from now
-# <n> = unix timestamp of expiration time
-# userref = user reference id.  32-bit signed number.  (optional)
-# validate = validate inputs only.  do not submit order (optional)
-# optional closing order to add to system when order gets filled:
-#   close[ordertype] = order type
-# close[price] = price
-# close[price2] = secondary price
-
-# Values -----------------------------------------------------------------------
-# descr = order description info
-# order = order description
-# close = conditional close order description (if conditional close set)
-# txid = array of transaction ids for order (if order was added successfully)
-# url      <- "https://api.kraken.com/0/private/AddOrder"
-# type <- "sell"
-# ordertype <- "market"
-# volume <- 0.1
-
-add_market_order <- function(url, key, secret, pair, type, ordertype, volume) {
-  
-  nonce <- as.character(as.numeric(Sys.time()) * 1000000)
-  post_data <- paste0("nonce=", nonce, "&pair=", pair, "&type=", type, "&ordertype=", ordertype,
-                      "&volume=", volume)
-  method_path <- gsub("^.*?kraken.com", "", url)
-  sign <- hmac(key =  RCurl::base64Decode(secret, mode = "raw"), 
-               object = c(charToRaw(method_path), digest(object = paste0(nonce, 
-                                                                         post_data), algo = "sha256", serialize = FALSE, 
-                                                         raw = TRUE)), algo = "sha512", raw = TRUE)
-  httpheader <- c(`API-Key` = key, `API-Sign` =  RCurl::base64Encode(sign))
-  
-  curl <- RCurl::getCurlHandle(useragent = paste("Rbitcoin", packageVersion("Rbitcoin")))
-  query_result_json <- rawToChar(RCurl::getURLContent(curl = curl, 
-                                                      url = url, binary = TRUE, postfields = post_data, 
-                                                      httpheader = httpheader))
-  query_result <- jsonlite::fromJSON(query_result_json)
-  
-  return(query_result)
-}
-
-
