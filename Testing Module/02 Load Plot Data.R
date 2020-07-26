@@ -20,7 +20,7 @@ frame1 <- subset(frame1, frame1$Date >= "2018-06-01")
 
 
 # Select interval
-frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '30 minutes') , format = '%H:%M:%S')]
+frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '15 minutes') , format = '%H:%M:%S')]
 
 # Create candle stick dataset
 candles <- frame1[, .(high = max(price), low = min(price), open = first(price),

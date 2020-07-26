@@ -3,7 +3,7 @@
 # screen -S pull_rest_eth_data R
 .rs.restartR()
 rm(list = ls())
-source(paste("/media/chris/DATA/Documents/Bot_Trading/Coinmaker", "10 Utils.R", sep = "/"))
+source(paste("/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1", "10 Utils.R", sep = "/"))
 setDTthreads(1)
 
 # Pulling historical data ------------------------------------------------------

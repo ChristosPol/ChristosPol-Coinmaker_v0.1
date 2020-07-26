@@ -33,7 +33,7 @@ value_price <- list()
 for (i in 1:length(EUR_pairs)){
   msg <- tryCatch({
   df <- simple_OHLC(interval = 1440, pair = EUR_pairs[i])
-  df$SMA_200 <- SMA(df$close, n =50)
+  df$SMA_200 <- SMA(df$close, n =100)
   
   value_price[[i]] <- (df$close[nrow(df)] - df$SMA_200[nrow(df)])/df$close[nrow(df)] 
   }, error = function(e){

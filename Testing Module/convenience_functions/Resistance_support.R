@@ -1,15 +1,11 @@
-candles
-roll <- 600
-# candles <- simple_OHLC(interval = 30, pair = "REPEUR")
-# candles$RSI <- RSI(candles$close, n =14)
+candles <- simple_OHLC(interval = 30, pair = "EOSEUR")
+candles$RSI <- RSI(candles$close, n =14)
+SR_lines(roll = 100, data = candles, plot.it = T)
+
+# Test, same 
 real <- ceiling(nrow(candles) / 10)
 realized_candles <- candles[1:real, ]
 
-
-
-SR_lines(roll = 50, data=realized_candles, plot.it = T)
-
-# Test, same 
 future_candles <- candles[(real + 1):nrow(candles), ]
 roll <- 800
 takeprofit <- 0.03
