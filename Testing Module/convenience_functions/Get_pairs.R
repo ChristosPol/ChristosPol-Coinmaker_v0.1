@@ -26,24 +26,27 @@ EUR_pairs <- EUR_pairs[!EUR_pairs %in% to_remove]
 # }, finally = {
 #   cleanup-code
 # }
+
+# Dynamic support and resistance
+SR_lines(data = candles, roll = 50, n_sort =5 )
+
 # Get OHLC data and determine trends
+
 i <- 6
 value_price <- list()
 
 for (i in 1:length(EUR_pairs)){
   msg <- tryCatch({
-  df <- simple_OHLC(interval = 1440, pair = EUR_pairs[i])
-  df$SMA_200 <- SMA(df$close, n =100)
+  df <- simple_OHLC(interval = 15, pair = EUR_pairs[i])
+  df$SMA_200 <- SMA(df$close, n = 30)
   
   value_price[[i]] <- (df$close[nrow(df)] - df$SMA_200[nrow(df)])/df$close[nrow(df)] 
   }, error = function(e){
   })
-  # df$day <- substr(df$Date_POSIXct, 1,10 )
-  # last_day_close <- df$close[df$day %in% tail(unique(df$day), 2)] 
-  # (tail(last_day_close, 1) - last_day_close[1]) / last_day_close[1]
-  # 
-  # 
-  # tt<- EMA(df$close, n = 200)
+  SR_lines(roll = 100, data = df, plot.it = T, pair = EUR_pairs[i])
+  
+  # plot(df$close, type ="l", main =EUR_pairs[i])
+  # lines(df$SMA_200, col ="red")
   print(i/length(EUR_pairs))
   Sys.sleep(2)
   
@@ -51,7 +54,13 @@ for (i in 1:length(EUR_pairs)){
 names(value_price) <- EUR_pairs
 
 # pair_compared_SMA <- sort(unlist(value_price))
-sort(unlist(value_price))
+pairs_traded <- sort(unlist(value_price))
+
+pp <- pairs_traded[pairs_traded>0][1:5][1]
+
+candles <- simple_OHLC(interval = 60, pair = names(pp))
+candles$RSI <- RSI(candles$close, n =14)
+SR_lines(roll = 150, data = candles, plot.it = T)
 
 trade_pairs <- pair_compared_SMA[pair_compared_SMA<0][1:5]
 

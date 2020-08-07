@@ -62,42 +62,67 @@ plot_candlesticks <- function(dta, Ns, asset){
   # axis(1, at = xs, labels = dta$time, las = 2)
 }
 
-# Plot chart with SR lines and return values 
-SR_lines <- function(roll, data, plot.it){
+# # Plot chart with SR lines and return values 
+
+SR_lines <- function(data, roll, n_sort){
   
   last_close <- data$close[nrow(data)]
-  resistance <- unique(rollapplyr(data$close[-nrow(data)], roll, max, fill = NA))
-  resistance <- resistance[!is.na(resistance)]
   
-  if (length(which(resistance < last_close)) == 0) {
-    resistance_act <- min(resistance, na.rm = T)
+  last_prices <- tail(data$close, roll)
+  last_volumes <- tail(data$volume, roll)
+  mydf <- data.frame(last_prices, last_volumes)
+  mydf <- arrange(mydf, mydf$last_prices)
   
-  } else if(all(last_close > resistance)){
-    resistance_act <- max(resistance, na.rm =T)
+  sup_df <- head(mydf, n_sort)
+  sup_w_mean <- sum(sup_df$last_prices *sup_df$last_volumes)/sum(sup_df$last_volumes)
   
-  } else {
-    resistance_act <- min(resistance[-which(resistance < last_close)], na.rm = T)
-  }
+  rs_df <- tail(mydf, n_sort)
+  rs_w_mean <- sum(rs_df$last_prices *rs_df$last_volumes)/sum(rs_df$last_volumes)
   
-  support <- unique(rollapplyr(data$close[-nrow(data)], roll, min, fill = NA))
-  support <- support[!is.na(support)]
+  plot_candlesticks(dta = data, Ns = nrow(data), asset = pair)
+  abline(h = rs_w_mean, col = "lightblue")
+  abline(h = sup_w_mean, col = "black")
   
-  if (length(which(support > last_close)) == 0) {
-    support_act <- max(support, na.rm = T)
-    
-  } else if(all(last_close < support)){
-    support_act <- min(support, na.rm =T)
-    
-  } else {
-    support_act <- max(support[-which(support > last_close)], na.rm = T)
-  }
-  if(plot.it == TRUE){
-    plot_candlesticks(dta = data, Ns = nrow(data), asset = pair)
-    abline(h = resistance_act, col = "lightblue")
-    abline(h = support_act, col = "black")
-  }
-  return(list(SL = support_act, RL = resistance_act))
+  return(list(SL = sup_w_mean, RL = rs_w_mean))
+  
 }
+
+
+# SR_lines <- function(roll, data, plot.it, pair){
+#   
+#   last_close <- data$close[nrow(data)]
+#   resistance <- unique(rollapplyr(data$close[-nrow(data)], roll, max, fill = NA))
+#   resistance <- resistance[!is.na(resistance)]
+#   
+#   if (length(which(resistance < last_close)) == 0) {
+#     resistance_act <- min(resistance, na.rm = T)
+#   
+#   } else if(all(last_close > resistance)){
+#     resistance_act <- max(resistance, na.rm =T)
+#   
+#   } else {
+#     resistance_act <- min(resistance[-which(resistance < last_close)], na.rm = T)
+#   }
+#   
+#   support <- unique(rollapplyr(data$close[-nrow(data)], roll, min, fill = NA))
+#   support <- support[!is.na(support)]
+#   
+#   if (length(which(support > last_close)) == 0) {
+#     support_act <- max(support, na.rm = T)
+#     
+#   } else if(all(last_close < support)){
+#     support_act <- min(support, na.rm =T)
+#     
+#   } else {
+#     support_act <- max(support[-which(support > last_close)], na.rm = T)
+#   }
+#   if(plot.it == TRUE){
+#     plot_candlesticks(dta = data, Ns = nrow(data), asset = pair)
+#     abline(h = resistance_act, col = "lightblue")
+#     abline(h = support_act, col = "black")
+#   }
+#   return(list(SL = support_act, RL = resistance_act))
+# }
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 #                                   Add standard order

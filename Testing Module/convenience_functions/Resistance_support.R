@@ -1,17 +1,18 @@
-candles <- simple_OHLC(interval = 30, pair = "EOSEUR")
+candles <- simple_OHLC(interval = 60, pair = "XRPEUR")
 candles$RSI <- RSI(candles$close, n =14)
 SR_lines(roll = 100, data = candles, plot.it = T)
 
 # Test, same 
-real <- ceiling(nrow(candles) / 10)
+real <- ceiling(nrow(candles) / 20)
 realized_candles <- candles[1:real, ]
 
 future_candles <- candles[(real + 1):nrow(candles), ]
-roll <- 800
-takeprofit <- 0.03
-stoploss_trail <- 0.01
-stoploss_ult <- 0.01
+roll <- 300
+takeprofit <- 0.1
+stoploss_trail <- 0.1
+stoploss_ult <- 0.1
 initial_budget <- 500
+
 Pure_RSI_Volume_Trailing <- function(roll, takeprofit, stoploss_trail,stoploss_ult) {
   
   # Train and test datasets
@@ -129,7 +130,7 @@ Pure_RSI_Volume_Trailing <- function(roll, takeprofit, stoploss_trail,stoploss_u
       
       # Sell condition
     } else if (fut$action[nrow(fut) - 1] %in% c("keep", "buy") & (
-      fut$exit_condition[nrow(fut)] == TRUE  )) {
+      fut$exit_condition[nrow(fut)] == TRUE | fut$crossover_resistance[nrow(fut)] == "above_resistance" )) {
       
       fut$action[nrow(fut)] <- "sell"
       fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
@@ -160,5 +161,52 @@ Pure_RSI_Volume_Trailing <- function(roll, takeprofit, stoploss_trail,stoploss_u
 
 View(realized_candles)
 warnings()
-
 unique(realized_candles$Price)
+myresult <- realized_candles
+# Close last position
+if(myresult$action[nrow(myresult)] == "keep") {
+  myresult$action[nrow(myresult)] <- "sell"
+  myresult$Price[nrow(myresult)] <- myresult$close[nrow(myresult)] * myresult$Units[nrow(myresult)]
+}
+
+# Calculate profits
+calculate_profits(myresult)
+mytest <- myresult
+idents <- unique(mytest$id)[!is.na(unique(mytest$id))]
+par(mfrow = c(1, 1))
+
+i <- 1
+for (i in 1:length(idents)){
+  
+  h <- head(which(mytest$id == idents[i]),1) -200
+  
+  if(h < 0){
+    h <- 1
+  }
+  t <- tail(which(mytest$id == idents[i]),1) + 200
+  mytest <- myresult[h:t, ]
+  ident <- idents[i]
+  
+  plot(1:nrow(mytest), mytest$close, type = "l")
+  buyprice <- mytest$close[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$close[mytest$action =="buy" & mytest$id ==ident])]
+  sellprice <- mytest$close[mytest$action =="sell" & mytest$id ==ident][!is.na(mytest$close[mytest$action =="sell" & mytest$id ==ident])]
+  
+  mtext(round((sellprice - buyprice)/buyprice, digits = 3), side = 3)
+  
+  points(which(mytest$action =="buy" & mytest$id ==ident), mytest$close[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$close[mytest$action =="buy" & mytest$id ==ident])], pch =19, col ="green")
+  points(which(mytest$action =="sell"& mytest$id ==ident), mytest$close[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$close[mytest$action =="sell"& mytest$id ==ident])], pch =19, col ="red")
+  
+  abline(h = mytest$SL[mytest$action =="buy"& mytest$id ==ident][!is.na(mytest$SL[mytest$action =="buy"& mytest$id ==ident])], col = "green")
+  abline(h = mytest$RL[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$RL[mytest$action =="sell"& mytest$id ==ident])], col = "red")
+  
+  # abline(h = 40)
+  # 
+  # plot(mytest$volume, type ="l")
+  # lines(mytest$EMA_volume, col ="red")
+  # points(which(mytest$action =="buy" & mytest$id ==ident), mytest$volume[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$volume[mytest$action =="buy" & mytest$id ==ident])], pch =19, col ="blue")
+  # points(which(mytest$action =="sell"& mytest$id ==ident), mytest$volume[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$volume[mytest$action =="sell"& mytest$id ==ident])], pch =19, col ="black")
+  # 
+  
+  mytest <- myresult
+  print(i)
+}

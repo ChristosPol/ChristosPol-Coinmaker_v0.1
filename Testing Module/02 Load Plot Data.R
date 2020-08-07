@@ -16,7 +16,7 @@ frame[, Date := as.Date(Date_POSIXct)]
 frame[, Hour := substr(frame$Time, 1,5)]
 frame[, miscellaneous := NULL]
 frame1 <- unique(frame)
-frame1 <- subset(frame1, frame1$Date >= "2018-06-01")
+frame1 <- subset(frame1, frame1$Date >= "2019-06-01")
 
 
 # Select interval
