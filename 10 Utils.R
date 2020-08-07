@@ -64,12 +64,12 @@ plot_candlesticks <- function(dta, Ns, asset){
 
 # # Plot chart with SR lines and return values 
 
-SR_lines <- function(data, roll, n_sort){
+SR_lines <- function(data, roll, n_sort, pair, Ns){
   
-  last_close <- data$close[nrow(data)]
+  last_close <- data$high[nrow(data)]
   
-  last_prices <- tail(data$close, roll)
-  last_volumes <- tail(data$volume, roll)
+  last_prices <- tail(data$high[-nrow(data)], roll)
+  last_volumes <- tail(data$volume[-nrow(data)], roll)
   mydf <- data.frame(last_prices, last_volumes)
   mydf <- arrange(mydf, mydf$last_prices)
   
@@ -79,7 +79,7 @@ SR_lines <- function(data, roll, n_sort){
   rs_df <- tail(mydf, n_sort)
   rs_w_mean <- sum(rs_df$last_prices *rs_df$last_volumes)/sum(rs_df$last_volumes)
   
-  plot_candlesticks(dta = data, Ns = nrow(data), asset = pair)
+  plot_candlesticks(dta = data, Ns = Ns, asset = pair)
   abline(h = rs_w_mean, col = "lightblue")
   abline(h = sup_w_mean, col = "black")
   

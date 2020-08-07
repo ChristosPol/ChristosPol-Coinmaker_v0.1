@@ -17,41 +17,38 @@ to_remove <- grep(paste(c("USD",
                           "CHF",
                           "GBP"), collapse ="|"), EUR_pairs, value = T)
 EUR_pairs <- EUR_pairs[!EUR_pairs %in% to_remove]
-# result = tryCatch({
-#   expr
-# }, warning = function(w) {
-#   warning-handler-code
-# }, error = function(e) {
-#   error-handler-code
-# }, finally = {
-#   cleanup-code
-# }
 
 # Dynamic support and resistance
-SR_lines(data = candles, roll = 50, n_sort =5 )
-
 # Get OHLC data and determine trends
 
-i <- 6
+i <- 10
+par(mfrow =c(3,1))
+par(bg = 'grey')
 value_price <- list()
 
 for (i in 1:length(EUR_pairs)){
   msg <- tryCatch({
-  df <- simple_OHLC(interval = 15, pair = EUR_pairs[i])
-  df$SMA_200 <- SMA(df$close, n = 30)
-  
+  df <- simple_OHLC(interval = 5, pair = EUR_pairs[i])
+  df$SMA_N <- SMA(df$close, n = 30)
+  df$rsi <- RSI(df$close, n = 14)
   value_price[[i]] <- (df$close[nrow(df)] - df$SMA_200[nrow(df)])/df$close[nrow(df)] 
   }, error = function(e){
   })
-  SR_lines(roll = 100, data = df, plot.it = T, pair = EUR_pairs[i])
+  SR_lines(data = df, roll = 48, n_sort = 4, pair = EUR_pairs[i], Ns = 100)
   
-  # plot(df$close, type ="l", main =EUR_pairs[i])
-  # lines(df$SMA_200, col ="red")
+  df1 <- tail(df, 100)
+  plot(df1$close, type = "l")
+  lines(df1$SMA_N, col ="red")
+  
+  plot(df1$rsi, type = "l")
+  abline(h = 30, lty ="dashed")
+  abline(h = 70, lty ="dashed")
   print(i/length(EUR_pairs))
   Sys.sleep(2)
   
 }
 names(value_price) <- EUR_pairs
+
 
 # pair_compared_SMA <- sort(unlist(value_price))
 pairs_traded <- sort(unlist(value_price))
