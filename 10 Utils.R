@@ -59,12 +59,12 @@ plot_candlesticks <- function(dta, Ns, asset){
   plot(dta$low, main = "", axes = F, xlab = "", ylab = "", ylim = c(mn, mx), type = "n")
   segments(x0 = xs, y0 = dta$open, x1 = xs, y1 = dta$close, col = color_list, lwd = 4)
   segments(x0 = xs, y0= dta$low, x1 = xs, y1 = dta$high, col = color_list, lwd = 1)
-  # axis(1, at = xs, labels = dta$time, las = 2)
+  axis(1, at = seq(1, max(xs), by =100), labels = substr(dta$Date_POSIXct[seq(1, max(xs), by =100)],1,10), las = 2)
 }
 
 # # Plot chart with SR lines and return values 
 
-SR_lines <- function(data, roll, n_sort, pair, Ns){
+SR_lines <- function(data, roll, n_sort, pair, Ns, plot.it = FALSE){
   
   last_close <- data$high[nrow(data)]
   
@@ -78,13 +78,23 @@ SR_lines <- function(data, roll, n_sort, pair, Ns){
   
   rs_df <- tail(mydf, n_sort)
   rs_w_mean <- sum(rs_df$last_prices *rs_df$last_volumes)/sum(rs_df$last_volumes)
+  if(plot.it == TRUE){
+    
   
-  plot_candlesticks(dta = data, Ns = Ns, asset = pair)
-  abline(h = rs_w_mean, col = "lightblue")
-  abline(h = sup_w_mean, col = "black")
-  
+    plot_candlesticks(dta = data, Ns = Ns, asset = pair)
+    abline(h = rs_w_mean, col = "black", lty = "dashed")
+    abline(h = sup_w_mean, col = "black", lty = "dashed")
+  }
   return(list(SL = sup_w_mean, RL = rs_w_mean))
   
+}
+
+# Plots boolinger bands
+bollinger_bands <- function(periods, times_sd, data){
+  df <- data
+  plot(df$close[-c(1:(periods-1))], type ="l", lwd =2)
+  lines(SMA(df$close, n=periods)[-c(1:(periods-1))] + times_sd*rollapply(df$close, periods, sd), col ="red")
+  lines(SMA(df$close, n=periods)[-c(1:(periods-1))] - times_sd*rollapply(df$close, periods, sd), col ="green")
 }
 
 
@@ -377,6 +387,141 @@ Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprof
   }
   return(train_data)
 }
+# Dynamic sr lines
+Dynamic_SR_Lines <- function(roll, n_sort, takeprofit, stoploss_trail,stoploss_ult) {
+  
+  # Train and test datasets
+  train_data[, c("SL",
+                 "RL",
+                 "exit_value",
+                 "exit_condition",
+                 "crossover",
+                 "action",
+                 "Units",
+                 "Price",
+                 "tp",
+                 "ult_sl",
+                 "trail_sl",
+                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+  
+  test_data[, c("SL",
+                "RL",
+                "exit_value",
+                "exit_condition",
+                "crossover",
+                "action",
+                "Units",
+                "Price",
+                "tp",
+                "ult_sl",
+                "trail_sl",
+                "id") := list(NA, NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+  
+  # Going intro the loop for test data -----------------------------------------
+  for (i in 1:nrow(test_data)){
+    
+    fut <- rbind(train_data, test_data[i, ])
+    
+    lines_sr <- SR_lines(data = fut, roll = roll, n_sort = n_sort, pair = "BTCEUR", Ns = nrow(fut))
+    fut$RL[nrow(fut)] <- lines_sr$RL 
+    fut$SL[nrow(fut)] <- lines_sr$SL
+    
+    if(fut$close[nrow(fut)] < lines_sr$SL){
+      
+      fut$crossover[nrow(fut)] <- "Below"
+    }else if (fut$close[nrow(fut)] > lines_sr$RL){
+      fut$crossover[nrow(fut)] <- "Above"
+    }else{
+      fut$crossover[nrow(fut)] <- "Between"
+    }
+    
+    # Exit condition for takeprofit  - Fixed
+    tp <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) + takeprofit * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
+    
+    if (length(tp) == 0) {
+      tp <- 0
+    }
+    
+    # Ultimate stop loss
+    ult_sl <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) - stoploss_ult * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
+    
+    if (length(ult_sl) == 0) {
+      ult_sl <- 0
+    }
+    
+    
+    # Trailing stop loss
+    if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] > fut$close[nrow(fut)-1] )  ){
+      
+      trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
+      if( trail_sl < tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)){
+        trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
+        
+      } else {
+        trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
+      }
+      
+    } else if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] <= fut$close[nrow(fut)-1] ) ){
+      trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
+      
+    } else {
+      trail_sl <-0
+    }
+    
+    if(length(trail_sl) == 0 ){
+      
+      trail_sl <- 0
+    }
+    
+    fut$tp[nrow(fut)] <- tp
+    fut$ult_sl[nrow(fut)] <- ult_sl
+    fut$trail_sl[nrow(fut)] <- trail_sl
+    
+    
+    fut$exit_condition[nrow(fut)] <- fut$trail_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$ult_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$tp[nrow(fut)] < fut$close[nrow(fut)]
+    
+    
+    # Deciding upon action -----------------------------------------------------
+    
+    # Buy condition
+    if ( (is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("sell", "no action")) &
+         fut$crossover[nrow(fut)] == "Below") {
+      
+      fut$action[nrow(fut)] <- "buy"
+      fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
+      fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)]
+      fut$id[nrow(fut)] <- round(runif(1, 10000, 5000000))
+      
+      # Sell condition
+    } else if (fut$action[nrow(fut) - 1] %in% c("keep", "buy") & (
+      fut$exit_condition[nrow(fut)] == TRUE | fut$crossover[nrow(fut)] == "Above" )) {
+      
+      fut$action[nrow(fut)] <- "sell"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
+      fut$Price[nrow(fut)] <- fut$close[nrow(fut)]* fut$Units[nrow(fut)]
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      initial_budget <- fut$Price[nrow(fut)]
+      
+      # Keep condition
+    } else if ( fut$action[nrow(fut) - 1] %in% c("buy", "keep")   & 
+                fut$exit_condition[nrow(fut)] == FALSE  ) {
+      
+      fut$action[nrow(fut)] <- "keep"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1 ]
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      
+    } else {
+      
+      fut$action[nrow(fut)] <- "no action"
+      
+    }
+    
+    train_data <- fut
+    print(i)
+  }
+  return(train_data)
+}
+
 
 # Indicator trading ------------------------------------------------------------
 # MACD crossover going long

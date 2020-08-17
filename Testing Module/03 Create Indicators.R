@@ -24,6 +24,15 @@ myresult <- Pure_RSI_Volume_Trailing(RSI_Period = 5,
                                stoploss_ult = 1,
                                times_vol = 1)
 
+myresult <- Volume_trading(EMA_volume = 20,
+                           takeprofit= 0.01,
+                           stoploss_trail = 0.005,
+                           stoploss_ult = 0.005, 
+                           times_vol = 3,
+                           candle_action_long = "bearish")
+  
+
+
 # Close last position
 if(myresult$action[nrow(myresult)] == "keep") {
   myresult$action[nrow(myresult)] <- "sell"
@@ -83,4 +92,81 @@ for (i in 1:length(idents)){
   
   mytest <- myresult
   print(i)
+}
+i <-87
+indeces <- which(mytest$action =="buy")
+for(i in 1:nrow(mytest)){
+  plot(mytest$close[1:i], type ="l")
+  
+    points(indeces[indeces[i %in% indeces] <= i], mytest$close[indeces[indeces[i %in% indeces] <= i]], pch =19, col ="blue")
+  
+    flush.console()
+  Sys.sleep(0.2)
+print(i)  
+}
+
+
+lambda <- runif(10,min=0,max=3)
+mean(lambda)
+
+## First plot
+N <- rpois(1,mean(lambda))
+plot(1,mean(N), xlim = c(1,10))
+
+## Subsequent points
+for (i in 2:10){
+  N <- rpois(i,mean(lambda))
+  points(i,mean(N))
+}
+
+
+n=1000
+df=data.frame(time=1:n,y=runif(n))
+window=100
+for(i in 1:(n-window)) {
+  flush.console()
+  plot(df$time,df$y,type='l',xlim=c(i,i+window))
+  Sys.sleep(.09)
+}
+
+library(shiny)
+
+runApp(list(
+  ui = pageWithSidebar(    
+    
+    headerPanel("Hello Shiny!"),
+    
+    sidebarPanel(
+      sliderInput("obs", 
+                  "Number of observations:", 
+                  min = 1,
+                  max = 1000, 
+                  value = 500)
+    ),
+    
+    mainPanel(
+      plotOutput("distPlot")
+    )
+  ),
+  server =function(input, output, session) {
+    autoInvalidate <- reactiveTimer(5000, session)
+    output$distPlot <- renderPlot({
+      autoInvalidate()
+      # generate an rnorm distribution and plot it
+      dist <- rnorm(input$obs)
+      hist(dist)
+    })
+    
+  }
+))
+
+
+xy <- data.frame(NAME=c("NAME1","NAME1","NAME2","NAME2"), X_START_YEAR=c(1984,1986,1899,1903), Y_START_VALUE=c(75,25,-90,-8),X_END_YEAR=c(1986,1994,1909,1924),Y_END_VALUE=c(20,50,-15,-70))
+layout(matrix(c(1,1)))   ## don't use layout in your case
+for (dat in split(xy,xy$NAME)){
+  xx = unlist(dat[,grep('X_',colnames(dat))])
+  yy = unlist(dat[,grep('Y_',colnames(dat))])
+  plot(xx,yy,main=unique(dat[,1]),pch=20)
+  dat <- dat[,-1]
+  segments(dat[,1],dat[,2],dat[,3],dat[,4])
 }

@@ -30,7 +30,7 @@ pair_data_results <- paste(data_path, pair, sep ="/")
 options("width" = 60)
 v <- nanotime(Sys.time() - as.difftime(60, unit = "days"))
 initial_id <- as.integer64(v)
-
+initial_id <- 1595337846329427362
 initial_id <-as.numeric(as.character(initial_id))
 
 # Pull historical trades since initial id from epoch time

@@ -16,11 +16,11 @@ frame[, Date := as.Date(Date_POSIXct)]
 frame[, Hour := substr(frame$Time, 1,5)]
 frame[, miscellaneous := NULL]
 frame1 <- unique(frame)
-frame1 <- subset(frame1, frame1$Date >= "2019-06-01")
+frame1 <- subset(frame1, frame1$Date >= "2019-06-20")
 
 
 # Select interval
-frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '15 minutes') , format = '%H:%M:%S')]
+frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '5 minutes') , format = '%H:%M:%S')]
 
 # Create candle stick dataset
 candles <- frame1[, .(high = max(price), low = min(price), open = first(price),
@@ -31,6 +31,8 @@ dim(candles)
 # Plot asset and select how many intervals 
 par(mfrow=c(1,1))
 plot_candlesticks(dta = candles, Ns = nrow(candles), asset = pair)
+SR_lines(data = candles, roll = nrow(candles), n_sort = 10, pair = pair, Ns = nrow(candles))
+abline(h = candles$close[nrow(candles)], lty = "dashed", col = "blue")
 
 # Remove and clean
 rm(frame)

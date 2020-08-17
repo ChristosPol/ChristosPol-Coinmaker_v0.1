@@ -21,60 +21,71 @@ EUR_pairs <- EUR_pairs[!EUR_pairs %in% to_remove]
 # Dynamic support and resistance
 # Get OHLC data and determine trends
 
-i <- 10
-par(mfrow =c(3,1))
+i <- 2
+par(mfrow =c(2,2))
 par(bg = 'grey')
 value_price <- list()
 
 for (i in 1:length(EUR_pairs)){
   msg <- tryCatch({
   df <- simple_OHLC(interval = 5, pair = EUR_pairs[i])
+  df$sharpe <- mean(diff(df$close)) / sd(df$close)
   df$SMA_N <- SMA(df$close, n = 30)
   df$rsi <- RSI(df$close, n = 14)
   value_price[[i]] <- (df$close[nrow(df)] - df$SMA_200[nrow(df)])/df$close[nrow(df)] 
-  }, error = function(e){
-  })
-  SR_lines(data = df, roll = 48, n_sort = 4, pair = EUR_pairs[i], Ns = 100)
   
-  df1 <- tail(df, 100)
-  plot(df1$close, type = "l")
-  lines(df1$SMA_N, col ="red")
+  SR_lines(data = df, roll = 200, n_sort = 5, pair = EUR_pairs[i], Ns = nrow(df))
+  abline(h = df$close[nrow(df)], lty = "dashed", col = "blue")
   
-  plot(df1$rsi, type = "l")
+  bollinger_bands(periods = 20,times_sd = 2.5, data = df)
+  df$macd <- MACD(df$close)[, 1]
+  df$signal <- MACD(df$close)[, 2]
+  plot(df$macd, type = "l")
+  abline(h = 0 , col ="red", lty = "dashed")
+  lines(df$signal)
+  plot(df$rsi, type = "l")
   abline(h = 30, lty ="dashed")
   abline(h = 70, lty ="dashed")
+  }, error = function(e){
+  })
   print(i/length(EUR_pairs))
+  print(paste0("Sharpe Ratio for: ",  EUR_pairs[i]," ", round(unique(df$sharpe), 4))) 
   Sys.sleep(2)
   
 }
 names(value_price) <- EUR_pairs
 
+sleep <-1
+par(mfrow=c(1,1))
+repeat{
+  Sys.sleep(sleep)
 
-# pair_compared_SMA <- sort(unlist(value_price))
-pairs_traded <- sort(unlist(value_price))
-
-pp <- pairs_traded[pairs_traded>0][1:5][1]
-
-candles <- simple_OHLC(interval = 60, pair = names(pp))
-candles$RSI <- RSI(candles$close, n =14)
-SR_lines(roll = 150, data = candles, plot.it = T)
-
-trade_pairs <- pair_compared_SMA[pair_compared_SMA<0][1:5]
-
-initial_budget <- 500
-divided_budget <- initial_budget/length(trade_pairs)
-
-# Need to give market orders for these 5 coins
-for (i in 1:length(trade_pairs)) {
-  
-  last_closed_price <- myfun(paste0("https://api.kraken.com/0/public/Ticker?pair=", names(trade_pairs[1])), secret = API_Sign, key = API_Key)
-  last_closed_price <- as.numeric(last_closed_price$result$OXTEUR$c[1])
-  buy_it <- add_market_order(url = "https://api.kraken.com/0/private/AddOrder",
-                           key = API_Key, secret = API_Sign, pair = names(trade_pairs[1]), type = "buy",
-                           ordertype = "market", volume = divided_budget/last_closed_price)
+    df <- simple_OHLC(interval = 1, pair = "BTCEUR")
+    df$SMA_N <- SMA(df$close, n = 30)
+    df$rsi <- RSI(df$close, n = 14)
+    value_price[[i]] <- (df$close[nrow(df)] - df$SMA_200[nrow(df)])/df$close[nrow(df)] 
+    
+    SR_lines(data = df, roll = nrow(df), n_sort = 10, pair = EUR_pairs[i], Ns = 50)
+    abline(h = df$close[nrow(df)], lty = "dashed", col = "blue")
+    
+    bollinger_bands(periods = 20,times_sd = 2.5, data = tail(df,50))
+    df$macd <- MACD(df$close)[, 1]
+    df$signal <- MACD(df$close)[, 2]
+    plot(tail(df$macd, 50), type = "l")
+    abline(h = 0 , col ="red", lty = "dashed")
+    # lines(df$signal)
+    plot(tail(df$rsi, 50), type = "l")
+    abline(h = 30, lty ="dashed")
+    abline(h = 70, lty ="dashed")
+    flush.console()
 }
 
-# Review your market orders
+n=1000
+df=data.frame(time=1:n,y=runif(n))
+window=100
+for(i in 1:(n-window)) {
+  flush.console()
+  plot(df$time,df$y,type='l',xlim=c(i,i+window))
+  Sys.sleep(.09)
+}
 
-
-myfun("https://api.kraken.com/0/private/ClosedOrders", secret = API_Sign, key = API_Key)
