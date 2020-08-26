@@ -15,7 +15,7 @@ candles_recent <- candles
 # plot_candlesticks(dta = candles_recent, Ns = 100, asset = pair)
 # 
 # # N Training Data
-train_n <- ceiling(nrow(candles_recent) / 17)
+train_n <- ceiling(nrow(candles_recent) / 30)
 train_data <- candles_recent[1:train_n, ]
 # 
 # # Test, same 
@@ -24,16 +24,18 @@ test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 library(foreach)
 
 # testing parameters
-roll <- data.frame(roll = c(20, 50, 100, 150, 200), flag = 1)
-n_sort <- data.frame(n_sort = c(3, 6, 10, 20), flag = 1)
-takeprofit <- data.frame(takeprofit = c(0.05, 0.08, 0.1), flag = 1)
-stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.02), flag = 1)
-stoploss_ult <- data.frame(stoploss_ult = c(0.01, 0.02), flag = 1)
+roll <- data.frame(roll = c(5, 15, 25, 40, 60, 75, 100, 200, 300), flag = 1)
+n_sort <- data.frame(n_sort = c(3, 5, 10, 15, 20,30), flag = 1)
+takeprofit <- data.frame(takeprofit = c(0.03, 0.05, 0.1), flag = 1)
+stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.02, 0.03), flag = 1)
+stoploss_ult <- data.frame(stoploss_ult = c(0.01, 0.02, 0.03), flag = 1)
 
 #
 testing_params <- left_join(roll, n_sort) %>%
   left_join(takeprofit)%>% left_join(stoploss_trail)%>% left_join(stoploss_ult)
 testing_params$flag <- NULL
+testing_params <- subset(testing_params, testing_params$roll > testing_params$n_sort)
+testing_params <- as.data.table(testing_params)
 
 library("doParallel")
 library("foreach")

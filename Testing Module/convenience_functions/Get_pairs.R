@@ -1,3 +1,7 @@
+rm(list = ls())
+source(paste("/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1", "10 Utils.R", sep = "/"))
+setDTthreads(1)
+
 api_info <- read.table(paste("/media/chris/DATA/Documents/Bot_Trading", "API_Keys.txt", sep = "/"), sep = ";", header = T)
 
 API_Key <- as.character(api_info$API_Key)
@@ -28,13 +32,13 @@ value_price <- list()
 
 for (i in 1:length(EUR_pairs)){
   msg <- tryCatch({
-  df <- simple_OHLC(interval = 5, pair = EUR_pairs[i])
+  df <- simple_OHLC(interval = 240, pair = EUR_pairs[i])
   df$sharpe <- mean(diff(df$close)) / sd(df$close)
   df$SMA_N <- SMA(df$close, n = 30)
   df$rsi <- RSI(df$close, n = 14)
   value_price[[i]] <- (df$close[nrow(df)] - df$SMA_200[nrow(df)])/df$close[nrow(df)] 
   
-  SR_lines(data = df, roll = 200, n_sort = 5, pair = EUR_pairs[i], Ns = nrow(df))
+  SR_lines(data = df, roll = 200, n_sort = 5, pair = EUR_pairs[i], Ns = nrow(df), plot.it = T)
   abline(h = df$close[nrow(df)], lty = "dashed", col = "blue")
   
   bollinger_bands(periods = 20,times_sd = 2.5, data = df)

@@ -16,23 +16,31 @@ test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 
 # One the many strategies tested, this one goes long when RSI is below threshold
 # and finds spike of sold volume
-myresult <- Pure_RSI_Volume_Trailing(RSI_Period = 5,
-                               RSI_below = 40,
-                               EMA_volume = 5,
-                               takeprofit = 0.1,
-                               stoploss_trail = 0.02,
-                               stoploss_ult = 1,
-                               times_vol = 1)
+# myresult <- Pure_RSI_Volume_Trailing(RSI_Period = 5,
+#                                RSI_below = 40,
+#                                EMA_volume = 5,
+#                                takeprofit = 0.1,
+#                                stoploss_trail = 0.02,
+#                                stoploss_ult = 1,
+#                                times_vol = 1)
+# 
+# myresult <- Volume_trading(EMA_volume = 20,
+#                            takeprofit= 0.05,
+#                            stoploss_trail = 0.01,
+#                            stoploss_ult = 0.01,
+#                            times_vol = 3,
+#                            candle_action_long = "bullish")
+st <- Sys.time()  
+myresult <- Dynamic_SR_Lines(roll = 100,
+                            n_sort = 10,
+                            takeprofit = 0.1,
+                            stoploss_trail = 0.05,
+                            stoploss_ult = 0.05,
+                            RSI_Period = 14,
+                            RSI_below = 25)
 
-myresult <- Volume_trading(EMA_volume = 20,
-                           takeprofit= 0.01,
-                           stoploss_trail = 0.005,
-                           stoploss_ult = 0.005, 
-                           times_vol = 3,
-                           candle_action_long = "bearish")
-  
-
-
+end <- Sys.time()  
+st - end
 # Close last position
 if(myresult$action[nrow(myresult)] == "keep") {
   myresult$action[nrow(myresult)] <- "sell"
@@ -55,7 +63,48 @@ table(unlist(profitable_trades) > 0)
 # Plot each trade's indicators and price action (to be functioned)
 mytest <- myresult
 idents <- unique(mytest$id)[!is.na(unique(mytest$id))]
-par(mfrow = c(3, 1))
+par(mfrow = c(2, 1))
+
+i <- 1
+for (i in 1:length(idents)){
+  
+  h <- head(which(mytest$id == idents[i]),1) -1000
+  
+  if(h < 0){
+    h <- 1
+  }
+  t <- tail(which(mytest$id == idents[i]),1) + 1000
+  mytest <- myresult[h:t, ]
+  ident <- idents[i]
+  
+  plot(1:nrow(mytest), mytest$close, type = "l")
+  buyprice <- mytest$close[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$close[mytest$action =="buy" & mytest$id ==ident])]
+  sellprice <- mytest$close[mytest$action =="sell" & mytest$id ==ident][!is.na(mytest$close[mytest$action =="sell" & mytest$id ==ident])]
+  
+  mtext(round((sellprice - buyprice)/buyprice, digits = 3), side = 3)
+  
+  points(which(mytest$action =="buy" & mytest$id ==ident), mytest$close[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$close[mytest$action =="buy" & mytest$id ==ident])], pch =19, col ="green")
+  points(which(mytest$action =="sell"& mytest$id ==ident), mytest$close[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$close[mytest$action =="sell"& mytest$id ==ident])], pch =19, col ="red")
+  
+  abline(h = mytest$SL[mytest$action =="buy"& mytest$id ==ident][!is.na(mytest$SL[mytest$action =="buy"& mytest$id ==ident])], col = "green")
+  abline(h = mytest$RL[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$RL[mytest$action =="sell"& mytest$id ==ident])], col = "red")
+  
+  # abline(h = 40)
+  # 
+  plot(mytest$RSI, type ="l")
+  abline(h = 30, col ="red")
+  abline(h = 70, col ="green")
+  
+  points(which(mytest$action =="buy" & mytest$id ==ident), mytest$RSI[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$RSI[mytest$action =="buy" & mytest$id ==ident])], pch =19, col ="green")
+  points(which(mytest$action =="sell"& mytest$id ==ident), mytest$RSI[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$RSI[mytest$action =="sell"& mytest$id ==ident])], pch =19, col ="red")
+    
+  mytest <- myresult
+  print(i)
+}
+
+mytest <- myresult
+idents <- unique(mytest$id)[!is.na(unique(mytest$id))]
+par(mfrow = c(1, 1))
 
 i <- 1
 for (i in 1:length(idents)){

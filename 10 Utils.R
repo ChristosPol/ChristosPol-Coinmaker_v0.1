@@ -388,10 +388,18 @@ Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprof
   return(train_data)
 }
 # Dynamic sr lines
-Dynamic_SR_Lines <- function(roll, n_sort, takeprofit, stoploss_trail,stoploss_ult) {
+Dynamic_SR_Lines <- function(roll,
+                             n_sort,
+                             takeprofit,
+                             stoploss_trail,
+                             stoploss_ult,
+                             RSI_Period,
+                             RSI_below) {
   
   # Train and test datasets
-  train_data[, c("SL",
+  train_data[, c("RSI",
+                 "crossover_RSI",
+                 "SL",
                  "RL",
                  "exit_value",
                  "exit_condition",
@@ -402,9 +410,11 @@ Dynamic_SR_Lines <- function(roll, n_sort, takeprofit, stoploss_trail,stoploss_u
                  "tp",
                  "ult_sl",
                  "trail_sl",
-                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
-  test_data[, c("SL",
+  test_data[, c("RSI",
+                "crossover_RSI",
+                "SL",
                 "RL",
                 "exit_value",
                 "exit_condition",
@@ -415,7 +425,7 @@ Dynamic_SR_Lines <- function(roll, n_sort, takeprofit, stoploss_trail,stoploss_u
                 "tp",
                 "ult_sl",
                 "trail_sl",
-                "id") := list(NA, NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                "id") := list(NA, NA, NA, NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
   # Going intro the loop for test data -----------------------------------------
   for (i in 1:nrow(test_data)){
@@ -434,6 +444,15 @@ Dynamic_SR_Lines <- function(roll, n_sort, takeprofit, stoploss_trail,stoploss_u
     }else{
       fut$crossover[nrow(fut)] <- "Between"
     }
+    
+    # RSI calculation
+    fut$RSI <- RSI(fut$close, n = RSI_Period)
+    
+    # RSI Crossing of upper or lower bounds
+    fut$crossover_RSI[nrow(fut)] <- ifelse(fut$RSI[nrow(fut)] < RSI_below ,
+                                           "RSI_lower", "RSI_higher")
+    
+
     
     # Exit condition for takeprofit  - Fixed
     tp <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) + takeprofit * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
@@ -485,7 +504,7 @@ Dynamic_SR_Lines <- function(roll, n_sort, takeprofit, stoploss_trail,stoploss_u
     
     # Buy condition
     if ( (is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("sell", "no action")) &
-         fut$crossover[nrow(fut)] == "Below") {
+         (fut$crossover[nrow(fut)] == "Below" &  fut$crossover_RSI[nrow(fut)] == "RSI_lower")) {
       
       fut$action[nrow(fut)] <- "buy"
       fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
@@ -494,7 +513,8 @@ Dynamic_SR_Lines <- function(roll, n_sort, takeprofit, stoploss_trail,stoploss_u
       
       # Sell condition
     } else if (fut$action[nrow(fut) - 1] %in% c("keep", "buy") & (
-      fut$exit_condition[nrow(fut)] == TRUE | fut$crossover[nrow(fut)] == "Above" )) {
+      # fut$exit_condition[nrow(fut)] == TRUE)) {
+      fut$exit_condition[nrow(fut)] == TRUE | fut$crossover[nrow(fut)] == "Above")) {
       
       fut$action[nrow(fut)] <- "sell"
       fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
