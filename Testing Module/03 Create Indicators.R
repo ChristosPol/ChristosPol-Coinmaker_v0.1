@@ -1,4 +1,5 @@
 # # Testing strategies ------------------------------------------------------------
+paraller_exec <- FALSE
 
 # Badget 
 initial_budget <- 500
@@ -16,13 +17,13 @@ test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 
 # One the many strategies tested, this one goes long when RSI is below threshold
 # and finds spike of sold volume
-# myresult <- Pure_RSI_Volume_Trailing(RSI_Period = 5,
-#                                RSI_below = 40,
-#                                EMA_volume = 5,
-#                                takeprofit = 0.1,
-#                                stoploss_trail = 0.02,
-#                                stoploss_ult = 1,
-#                                times_vol = 1)
+myresult <- Pure_RSI_Volume_Trailing(RSI_Period = 5,
+                               RSI_below = 40,
+                               EMA_volume = 15,
+                               takeprofit = 1,
+                               stoploss_trail = 0.05,
+                               stoploss_ult = 2,
+                               times_vol = 1)
 # 
 # myresult <- Volume_trading(EMA_volume = 20,
 #                            takeprofit= 0.05,
@@ -31,13 +32,13 @@ test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 #                            times_vol = 3,
 #                            candle_action_long = "bullish")
 st <- Sys.time()  
-myresult <- Dynamic_SR_Lines(roll = 100,
+myresult <- Dynamic_SR_Lines(roll = 50,
                             n_sort = 10,
-                            takeprofit = 0.1,
-                            stoploss_trail = 0.05,
-                            stoploss_ult = 0.05,
-                            RSI_Period = 14,
-                            RSI_below = 25)
+                            takeprofit = 1,
+                            stoploss_trail = 1,
+                            stoploss_ult = 1,
+                            RSI_Period = 5,
+                            RSI_below = 30)
 
 end <- Sys.time()  
 st - end
@@ -86,8 +87,8 @@ for (i in 1:length(idents)){
   points(which(mytest$action =="buy" & mytest$id ==ident), mytest$close[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$close[mytest$action =="buy" & mytest$id ==ident])], pch =19, col ="green")
   points(which(mytest$action =="sell"& mytest$id ==ident), mytest$close[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$close[mytest$action =="sell"& mytest$id ==ident])], pch =19, col ="red")
   
-  abline(h = mytest$SL[mytest$action =="buy"& mytest$id ==ident][!is.na(mytest$SL[mytest$action =="buy"& mytest$id ==ident])], col = "green")
-  abline(h = mytest$RL[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$RL[mytest$action =="sell"& mytest$id ==ident])], col = "red")
+  # abline(h = mytest$SL[mytest$action =="buy"& mytest$id ==ident][!is.na(mytest$SL[mytest$action =="buy"& mytest$id ==ident])], col = "green")
+  # abline(h = mytest$RL[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$RL[mytest$action =="sell"& mytest$id ==ident])], col = "red")
   
   # abline(h = 40)
   # 

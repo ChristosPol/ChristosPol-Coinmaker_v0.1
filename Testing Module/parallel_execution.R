@@ -4,6 +4,7 @@
 # 102
 # 2020-01-10	2020-06-19	40_110_200_0.03_0.05
 # # Badget
+paraller_exec <-TRUE
 initial_budget <- 500
 
 # # select period of data 
@@ -24,39 +25,49 @@ test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 library(foreach)
 
 # testing parameters
-roll <- data.frame(roll = c(5, 15, 25, 40, 60, 75, 100, 200, 300), flag = 1)
-n_sort <- data.frame(n_sort = c(3, 5, 10, 15, 20,30), flag = 1)
-takeprofit <- data.frame(takeprofit = c(0.03, 0.05, 0.1), flag = 1)
-stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.02, 0.03), flag = 1)
-stoploss_ult <- data.frame(stoploss_ult = c(0.01, 0.02, 0.03), flag = 1)
+RSI_Period <- data.frame(RSI_Period = c(5, 14, 20, 25, 35), flag = 1)
+RSI_below <- data.frame(RSI_below = c(15, 20, 25,30, 40), flag = 1)
+EMA_volume <- data.frame(EMA_volume = c(15), flag = 1)
+takeprofit <- data.frame(takeprofit = c(0.01, 0.02, 0.05, 0.08, 1), flag = 1)
+stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.02, 0.05), flag = 1)
+stoploss_ult <- data.frame(stoploss_ult = c(2), flag = 1)
+times_vol <- data.frame(times_vol = c(1, 2, 3), flag = 1)
 
 #
-testing_params <- left_join(roll, n_sort) %>%
-  left_join(takeprofit)%>% left_join(stoploss_trail)%>% left_join(stoploss_ult)
+testing_params <- left_join(RSI_Period, RSI_below) %>%
+  left_join(EMA_volume)%>%
+  left_join(takeprofit)%>% left_join(stoploss_trail)%>% left_join(stoploss_ult)%>%
+  left_join(times_vol)
+
 testing_params$flag <- NULL
-testing_params <- subset(testing_params, testing_params$roll > testing_params$n_sort)
 testing_params <- as.data.table(testing_params)
+i <-1
 
 library("doParallel")
 library("foreach")
-cl <- parallel::makeForkCluster(3)
+cl <- parallel::makeForkCluster(4)
 doParallel::registerDoParallel(cl)
 start_time <- Sys.time()
 results <- foreach(i = 1:nrow(testing_params), .combine = 'rbind') %dopar% {
-  myresult <- Dynamic_SR_Lines(roll = testing_params$roll[i],
-                               n_sort = testing_params$n_sort[i],
+  myresult <- Pure_RSI_Volume_Trailing(RSI_Period  = testing_params$RSI_Period[i],
+                               RSI_below = testing_params$RSI_below[i],
+                               EMA_volume = testing_params$EMA_volume[i],
                                takeprofit = testing_params$takeprofit[i],
                                stoploss_trail = testing_params$stoploss_trail[i],
-                               stoploss_ult = testing_params$stoploss_ult[i])
+                               stoploss_ult = testing_params$stoploss_ult[i],
+                               times_vol = testing_params$times_vol[i])
   # er <- tryCatch(
   #    {
-  res <- calculate_profits(myresult)
-  res$params <- paste(roll = testing_params$roll[i],
-                      n_sort = testing_params$n_sort[i],
-                      takeprofit = testing_params$takeprofit[i],
-                      stoploss_trail = testing_params$stoploss_trail[i],
-                      stoploss_ult = testing_params$stoploss_ult[i],
-                      sep ="_")
+  params <- paste(RSI_Period  = testing_params$RSI_Period[i],
+                  RSI_below = testing_params$RSI_below[i],
+                  EMA_volume = testing_params$EMA_volume[i],
+                  takeprofit = testing_params$takeprofit[i],
+                  stoploss_trail = testing_params$stoploss_trail[i],
+                  stoploss_ult = testing_params$stoploss_ult[i],
+                  times_vol = testing_params$times_vol[i],
+                  sep ="_")
+  res <- calculate_profits(myresult, params = params)
+  
   # 
   gc()
   # error = function(e){})

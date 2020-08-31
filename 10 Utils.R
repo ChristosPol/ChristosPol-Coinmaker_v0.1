@@ -360,7 +360,7 @@ Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprof
       
       # Sell condition
     } else if (fut$action[nrow(fut) - 1] %in% c("keep", "buy") & (
-      fut$exit_condition[nrow(fut)] == TRUE  )) {
+      fut$exit_condition[nrow(fut)] == TRUE )) {
       
       fut$action[nrow(fut)] <- "sell"
       fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
@@ -2621,7 +2621,8 @@ simple_OHLC <- function(interval, pair){
 
 ###
 # Calculate profits and number of trades ---------------------------------------
-calculate_profits <- function(dataset){
+
+calculate_profits <- function(dataset, params){
   
   calcu <- dataset[action %in% c("buy", "sell"), ]
   calcu <- subset(calcu,  !calcu$id %in% names(which(table(calcu$id) ==1)))
@@ -2640,6 +2641,10 @@ calculate_profits <- function(dataset){
   } else {
     
     dd <- data.frame(profit = 0, n_trades = 0, enter_date = as.Date("2020-04-07"), exit_date =as.Date("2020-04-07"))
+  }
+  
+  if(paraller_exec ==TRUE){
+    dd$params <- params
   }
   
   write.table(dd, "/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv",
