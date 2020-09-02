@@ -69,12 +69,12 @@ par(mfrow = c(2, 1))
 i <- 1
 for (i in 1:length(idents)){
   
-  h <- head(which(mytest$id == idents[i]),1) -1000
+  h <- head(which(mytest$id == idents[i]),1) -200
   
   if(h < 0){
     h <- 1
   }
-  t <- tail(which(mytest$id == idents[i]),1) + 1000
+  t <- tail(which(mytest$id == idents[i]),1) + 200
   mytest <- myresult[h:t, ]
   ident <- idents[i]
   
@@ -92,12 +92,12 @@ for (i in 1:length(idents)){
   
   # abline(h = 40)
   # 
-  plot(mytest$RSI, type ="l")
-  abline(h = 30, col ="red")
-  abline(h = 70, col ="green")
+  plot(mytest$deriv, type ="l")
+  abline(h = 0, col ="red")
   
-  points(which(mytest$action =="buy" & mytest$id ==ident), mytest$RSI[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$RSI[mytest$action =="buy" & mytest$id ==ident])], pch =19, col ="green")
-  points(which(mytest$action =="sell"& mytest$id ==ident), mytest$RSI[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$RSI[mytest$action =="sell"& mytest$id ==ident])], pch =19, col ="red")
+  
+  points(which(mytest$action =="buy" & mytest$id ==ident), mytest$deriv[mytest$action =="buy" & mytest$id ==ident][!is.na(mytest$deriv[mytest$action =="buy" & mytest$id ==ident])], pch =19, col ="green")
+  points(which(mytest$action =="sell"& mytest$id ==ident), mytest$deriv[mytest$action =="sell"& mytest$id ==ident][!is.na(mytest$deriv[mytest$action =="sell"& mytest$id ==ident])], pch =19, col ="red")
     
   mytest <- myresult
   print(i)
