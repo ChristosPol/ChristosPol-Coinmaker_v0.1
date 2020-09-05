@@ -20,6 +20,7 @@ suppressMessages(library(nanotime))
 suppressMessages(library(gganimate))
 suppressMessages(library(gapminder))
 suppressMessages(library(gifski))
+suppressMessages(library(gridExtra))
 # Functions --------------------------------------------------------------------
 
 # Download historical trade data for selected pair using initial id ------------
@@ -264,10 +265,11 @@ get_balance <- function (url, key, secret) {
 }
 
 # Splines trend inversion
-Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar) {
+Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.it) {
   
   # Train and test datasets
-  train_data[, c("spline",
+  train_data[, c("x",
+                 "spline",
                  "deriv",
                  "sign_derivs",
                  "change_sign",
@@ -278,9 +280,10 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar) {
                  "tp",
                  "ult_sl",
                  "trail_sl",
-                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                 "id") := list(NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
-  test_data[, c("spline",
+  test_data[, c("x",
+                "spline",
                 "deriv",
                 "sign_derivs",
                 "change_sign",
@@ -291,13 +294,13 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar) {
                 "tp",
                 "ult_sl",
                 "trail_sl",
-                "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                "id") := list(NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
   # Going intro the loop for test data -----------------------------------------
   for (i in 1:nrow(test_data)){
     
     fut <- rbind(train_data, test_data[i, ])
-    
+    fut$x <- 1:nrow(fut)
     # Calculate spline - derivative
     smoothingSpline = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar)
     fut[, spline := predict(smoothingSpline)$y]
@@ -307,12 +310,24 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar) {
     fut[, sign_derivs := c(sign(deriv))]
     fut[, change_sign := c(0, diff(sign(deriv)))]
     
-    # par(mfrow =c(2,1))
-    # plot(fut$close, type ="l")
-    # lines(fut$spline, col ="red")
-    # plot(fut$deriv, type ="l", main = paste0("sign: ", fut$change_sign[nrow(fut)], " sign deriv: ", fut$sign_derivs[nrow(fut)], " deriv ", fut$deriv[nrow(fut)]))
-    # abline(h =0)
-    # print(nrow(fut))
+    if(plot.it == TRUE){
+      
+      fut <- tail(fut, 200)
+      df_points_buy <- data.frame(x = na.omit(fut$x[fut$action =="buy"]),
+                              y = na.omit(fut$close[fut$action =="buy"]))
+      df_points_sell <- data.frame(x = na.omit(fut$x[fut$action =="sell"]),
+                                  y = na.omit(fut$close[fut$action == "sell"]))
+      
+      par(mfrow = c(2, 1))
+      plot(fut$close, type ="l", main = paste0("profits = ", tail(na.omit(fut$Price), 1)))
+      lines(fut$spline, col ="red")
+      points(df_points_buy$x, df_points_buy$y, col ="green", pch = 19)
+      points(df_points_sell$x, df_points_sell$y, col ="red", pch = 19)
+  
+      plot(fut$deriv, type ="l", main = paste0("sign: ",
+                                               " sign deriv: ", fut$sign_derivs[nrow(fut)], " deriv ", fut$deriv[nrow(fut)]))
+      abline(h = 0, col = "red", lty = 5, lwd = 2)
+    }
     
     # Exit condition for takeprofit  - Fixed
     tp <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) + takeprofit * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
@@ -397,8 +412,10 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar) {
     
     train_data <- fut
     # print(i)
-    # Sys.sleep(0.2)
-    # flush.console()
+    if(plot.it == TRUE){
+      Sys.sleep(0.1)
+      # flush.console()
+    }
   }
   return(train_data)
 }

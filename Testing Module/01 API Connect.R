@@ -34,7 +34,7 @@ v <- nanotime(Sys.time() - as.difftime(300, unit = "days"))
 initial_id <- as.integer64(v)
 
 # Or pull from last ID
-initial_id <- 1598160109670382691
+initial_id <- 1599260307813755687
 initial_id <- as.numeric(as.character(initial_id))
 
 # Pull historical trades since initial id from epoch time

@@ -16,7 +16,8 @@ test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 myresult <- Splines_Tangent(spar = 0.95, 
                             takeprofit = 0.015,
                             stoploss_trail = 1,
-                            stoploss_ult = 1)
+                            stoploss_ult = 1,
+                            plot.it = T)
 calculate_profits(myresult)
 win_ratio(myresult)
 
@@ -37,7 +38,7 @@ p1 <- ggplot(data= myresult, aes(x=x, y=close)) +
   geom_point(data = segment_buy, aes(x=x, y=close),
              color ="green", size = 1) +
   geom_point(data = segment_sell, aes(x=x, y=close),
-             color ="red", size = 1) 
+             color ="red", size = 1);p1 
 
 
 

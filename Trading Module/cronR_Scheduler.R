@@ -3,13 +3,13 @@
 library(cronR)
 
 # Path of live trading Rscript
-path <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker/Testing Module/Live_trading.R"
+path <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Trading Module/Live_trading.R"
 
 # Command
 cmd <- cron_rscript(path)
 
 # add frequency and intervals
-cron_add(cmd, frequency = '*/5 * * * *', id = 'Live trading', description = 'Live trading', at = '21:55')
+cron_add(cmd, frequency = '*/60 * * * *', id = 'Live trading', description = 'Live trading', at = '01:00')
 
 # Check all jobs
 cron_ls()

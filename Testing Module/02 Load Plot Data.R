@@ -18,11 +18,11 @@ frame[, miscellaneous := NULL]
 frame1 <- unique(frame)
 
 # frame1 <- subset(frame1, frame1$Date >= "2019-12-01" & frame1$Date <= "2020-06-01")
-frame1 <- subset(frame1, frame1$Date >= "2020-08-25")
+frame1 <- subset(frame1, frame1$Date >= "2019-04-01")
 
 
 # Select interval
-frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '1 minutes') , format = '%H:%M:%S')]
+frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '60 minutes') , format = '%H:%M:%S')]
 
 # Create candle stick dataset
 candles <- frame1[, .(high = max(price), low = min(price), open = first(price),
@@ -36,6 +36,8 @@ plot_candlesticks(dta = candles, Ns = nrow(candles), asset = pair)
 SR_lines(data = candles, roll = nrow(candles), n_sort = 100, pair = pair, Ns = nrow(candles))
 abline(h = candles$close[nrow(candles)], lty = "dashed", col = "blue")
 
+p1 <- ggplot(data= candles, aes(x=1:nrow(candles), y=close)) +
+  geom_line(alpha = 0.5);p1
 # Remove and clean
 rm(frame)
 rm(frame1)
