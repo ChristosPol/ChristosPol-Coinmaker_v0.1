@@ -17,7 +17,9 @@ suppressMessages(library(foreach))
 suppressMessages(library(doParallel))
 suppressMessages(library(bit64))
 suppressMessages(library(nanotime))
-
+suppressMessages(library(gganimate))
+suppressMessages(library(gapminder))
+suppressMessages(library(gifski))
 # Functions --------------------------------------------------------------------
 
 # Download historical trade data for selected pair using initial id ------------
@@ -97,6 +99,19 @@ bollinger_bands <- function(periods, times_sd, data){
   lines(SMA(df$close, n=periods)[-c(1:(periods-1))] - times_sd*rollapply(df$close, periods, sd), col ="green")
 }
 
+# how many trades were succesful (to be functioned)
+win_ratio <- function(dataset){
+  df <- dataset
+  mah <- subset(df, df$action %in% c("buy","sell") )
+  profitable_trades <- list()
+  ids_s <- unique(mah$id)
+  for(i in 1:length(unique(mah$id))){
+    
+    profitable_trades[[i]] <- mah$close[mah$id == ids_s[i] & mah$action =="sell"]-mah$close[mah$id == ids_s[i] & mah$action =="buy"]
+  }
+  res <- table(unlist(profitable_trades) > 0)[names(table(unlist(profitable_trades) > 0)) ==T]/sum(table(unlist(profitable_trades) > 0))
+  return(res)
+}
 
 # SR_lines <- function(roll, data, plot.it, pair){
 #   
@@ -246,6 +261,146 @@ get_balance <- function (url, key, secret) {
   query_result <- jsonlite::fromJSON(query_result_json)
   
   return(query_result)
+}
+
+# Splines trend inversion
+Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar) {
+  
+  # Train and test datasets
+  train_data[, c("spline",
+                 "deriv",
+                 "sign_derivs",
+                 "change_sign",
+                 "exit_condition",
+                 "action",
+                 "Units",
+                 "Price",
+                 "tp",
+                 "ult_sl",
+                 "trail_sl",
+                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+  
+  test_data[, c("spline",
+                "deriv",
+                "sign_derivs",
+                "change_sign",
+                "exit_condition",
+                "action",
+                "Units",
+                "Price",
+                "tp",
+                "ult_sl",
+                "trail_sl",
+                "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+  
+  # Going intro the loop for test data -----------------------------------------
+  for (i in 1:nrow(test_data)){
+    
+    fut <- rbind(train_data, test_data[i, ])
+    
+    # Calculate spline - derivative
+    smoothingSpline = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar)
+    fut[, spline := predict(smoothingSpline)$y]
+    fut[, deriv := predict(smoothingSpline, deriv = 1)$y]
+    
+    # Sign of deriv - [-2 for desc, 2 for asc] 
+    fut[, sign_derivs := c(sign(deriv))]
+    fut[, change_sign := c(0, diff(sign(deriv)))]
+    
+    # par(mfrow =c(2,1))
+    # plot(fut$close, type ="l")
+    # lines(fut$spline, col ="red")
+    # plot(fut$deriv, type ="l", main = paste0("sign: ", fut$change_sign[nrow(fut)], " sign deriv: ", fut$sign_derivs[nrow(fut)], " deriv ", fut$deriv[nrow(fut)]))
+    # abline(h =0)
+    # print(nrow(fut))
+    
+    # Exit condition for takeprofit  - Fixed
+    tp <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) + takeprofit * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
+    
+    if (length(tp) == 0) {
+      tp <- 0
+    }
+    
+    # Ultimate stop loss
+    ult_sl <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) - stoploss_ult * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
+    
+    if (length(ult_sl) == 0) {
+      ult_sl <- 0
+    }
+    
+    
+    # Trailing stop loss
+    if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] > fut$close[nrow(fut)-1] )  ){
+      
+      trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
+      if( trail_sl < tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)){
+        trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
+        
+      } else {
+        trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
+      }
+      
+    } else if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] <= fut$close[nrow(fut)-1] ) ){
+      trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
+      
+    } else {
+      trail_sl <-0
+    }
+    
+    if(length(trail_sl) == 0 ){
+      
+      trail_sl <- 0
+    }
+    
+    fut$tp[nrow(fut)] <- tp
+    fut$ult_sl[nrow(fut)] <- ult_sl
+    fut$trail_sl[nrow(fut)] <- trail_sl
+    
+    
+    fut$exit_condition[nrow(fut)] <- fut$trail_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$ult_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$tp[nrow(fut)] < fut$close[nrow(fut)]
+    
+    
+    # Deciding upon action -----------------------------------------------------
+    
+    # Buy condition
+    if ( (is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("sell", "no action")) &
+         fut$deriv[nrow(fut)] > 0) {
+      
+      fut$action[nrow(fut)] <- "buy"
+      fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
+      fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)]
+      fut$id[nrow(fut)] <- round(runif(1, 10000, 5000000))
+      
+      # Sell condition
+    } else if (fut$action[nrow(fut) - 1] %in% c("keep", "buy") & (
+      fut$exit_condition[nrow(fut)] == TRUE | fut$deriv[nrow(fut)] < 0 )) {
+      
+      fut$action[nrow(fut)] <- "sell"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
+      fut$Price[nrow(fut)] <- fut$close[nrow(fut)]* fut$Units[nrow(fut)]
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      initial_budget <- fut$Price[nrow(fut)]
+      
+      # Keep condition
+    } else if ( fut$action[nrow(fut) - 1] %in% c("buy", "keep")   &
+                fut$exit_condition[nrow(fut)] == FALSE  ) {
+      
+      fut$action[nrow(fut)] <- "keep"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1 ]
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      
+    } else {
+      
+      fut$action[nrow(fut)] <- "no action"
+      
+    }
+    
+    train_data <- fut
+    # print(i)
+    # Sys.sleep(0.2)
+    # flush.console()
+  }
+  return(train_data)
 }
 
 
@@ -1131,10 +1286,13 @@ Long_term_trend_Slope_RSI <- function(RSI_Period,takeprofit, stoploss_trail,stop
                  "exit_condition",
                  "RSI_Flag",
                  "Trend_Slope",
+                 "tp",
+                 "ult_sl",
+                 "trail_sl",
                  "action",
                  "Units",
                  "Price",
-                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                 "id") := list(NA,NA,NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
   test_data[, c(paste0("RSI", "_", RSI_Period),
                 paste0("EMA_Trend", "_", trend),
@@ -1143,14 +1301,18 @@ Long_term_trend_Slope_RSI <- function(RSI_Period,takeprofit, stoploss_trail,stop
                 "exit_condition",
                 "RSI_Flag",
                 "Trend_Slope",
+                "tp",
+                "ult_sl",
+                "trail_sl",
                 "action",
                 "Units",
                 "Price",
-                "id") := list(NA, NA, NA,NA,NA, NA, NA, NA, NA, NA, NA)]
+                "id") := list(NA,NA,NA,NA, NA, NA,NA,NA, NA, NA, NA, NA, NA, NA)]
   
   # Going intro the loop for test data -----------------------------------------
   for (i in 1:nrow(test_data)){
     
+    # browser()
     fut <- rbind(train_data, test_data[i, ])
     fut[, c(paste0("RSI", "_", RSI_Period),
             paste0("EMA_Trend", "_", trend)) := list(RSI(close, n = RSI_Period),

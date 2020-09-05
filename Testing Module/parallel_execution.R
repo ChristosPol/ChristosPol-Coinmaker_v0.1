@@ -25,10 +25,10 @@ test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 library(foreach)
 
 # testing parameters
-spar <- data.frame(spar = seq(0.1, 1, 0.1), flag = 1)
-takeprofit <- data.frame(takeprofit = c(0.01, 0.02, 0.05, 0.08, 1, 2), flag = 1)
-stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.02, 0.05, 2), flag = 1)
-stoploss_ult <- data.frame(stoploss_ult = c(0.01, 0.02, 0.05, 2), flag = 1)
+spar <- data.frame(spar = seq(0.9, 1, 0.05), flag = 1)
+takeprofit <- data.frame(takeprofit = c(0.01, 0.015, 0.02, 0.025, 0.03, 0.035, 0.05,0.08, 1), flag = 1)
+stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.02, 0.05, 1), flag = 1)
+stoploss_ult <- data.frame(stoploss_ult = c(0.01, 0.02, 0.05, 1), flag = 1)
 
 
 #
@@ -55,6 +55,7 @@ results <- foreach(i = 1:nrow(testing_params), .combine = 'rbind') %dopar% {
                   takeprofit = testing_params$takeprofit[i],
                   stoploss_trail = testing_params$stoploss_trail[i],
                   stoploss_ult = testing_params$stoploss_ult[i],
+                  stoploss_ult =  round(win_ratio(myresult),2),
                   sep ="_")
   res <- calculate_profits(myresult, params = params)
   

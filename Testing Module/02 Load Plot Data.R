@@ -18,11 +18,11 @@ frame[, miscellaneous := NULL]
 frame1 <- unique(frame)
 
 # frame1 <- subset(frame1, frame1$Date >= "2019-12-01" & frame1$Date <= "2020-06-01")
-frame1 <- subset(frame1, frame1$Date >= "2020-05-01")
+frame1 <- subset(frame1, frame1$Date >= "2020-08-25")
 
 
 # Select interval
-frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '5 minutes') , format = '%H:%M:%S')]
+frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '1 minutes') , format = '%H:%M:%S')]
 
 # Create candle stick dataset
 candles <- frame1[, .(high = max(price), low = min(price), open = first(price),

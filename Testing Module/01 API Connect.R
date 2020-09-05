@@ -28,11 +28,14 @@ dir.create(paste(data_path, pair, sep ="/"), showWarnings = FALSE)
 pair_data_results <- paste(data_path, pair, sep ="/")
 
 # Choose initial ID for the first pull
+# Either select a period in actual days
 options("width" = 60)
 v <- nanotime(Sys.time() - as.difftime(300, unit = "days"))
 initial_id <- as.integer64(v)
-initial_id <- 1598630696748457268
-initial_id <-as.numeric(as.character(initial_id))
+
+# Or pull from last ID
+initial_id <- 1598160109670382691
+initial_id <- as.numeric(as.character(initial_id))
 
 # Pull historical trades since initial id from epoch time
 hist_trades_pair(sleep = 3, hist_id = initial_id, pair = pair)
