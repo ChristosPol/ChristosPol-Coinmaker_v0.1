@@ -16,7 +16,9 @@ API_Sign <- as.character(api_info$API_Sign)
 
 # Choose pair
 # pair <- "BTCEUR"
-pair <- "XETHZEUR"
+# pair <- "XETHZEUR"
+# pair <- "LSKEUR"
+pair <- "QTUMEUR"
 
 # Path to save results0
 data_path <- "/media/chris/DATA/Documents/Bot_Trading/Historical_data"
@@ -34,7 +36,7 @@ v <- nanotime(Sys.time() - as.difftime(300, unit = "days"))
 initial_id <- as.integer64(v)
 
 # Or pull from last ID
-initial_id <- 1599260307813755687
+initial_id <- 1489724829277920065
 initial_id <- as.numeric(as.character(initial_id))
 
 # Pull historical trades since initial id from epoch time

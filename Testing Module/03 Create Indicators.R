@@ -17,10 +17,10 @@ myresult <- Splines_Tangent(spar = 0.95,
                             takeprofit = 0.015,
                             stoploss_trail = 1,
                             stoploss_ult = 1,
-                            plot.it = T)
+                            plot.it = F)
 calculate_profits(myresult)
 win_ratio(myresult)
-
+View(na.omit(myresult$Price))
 
 # Close last position
 if(myresult$action[nrow(myresult)] == "keep") {

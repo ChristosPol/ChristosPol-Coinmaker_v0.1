@@ -18,7 +18,7 @@ frame[, miscellaneous := NULL]
 frame1 <- unique(frame)
 
 # frame1 <- subset(frame1, frame1$Date >= "2019-12-01" & frame1$Date <= "2020-06-01")
-frame1 <- subset(frame1, frame1$Date >= "2019-04-01")
+# frame1 <- subset(frame1, frame1$Date >= "2020-08-01")
 
 
 # Select interval

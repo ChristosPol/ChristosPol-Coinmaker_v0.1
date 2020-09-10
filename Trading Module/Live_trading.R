@@ -1,4 +1,4 @@
-Sys.sleep(10)
+Sys.sleep(50)
 rm(list = ls())
 # screen -S Live_Trading R
 
@@ -27,7 +27,6 @@ url <- "https://api.kraken.com/0/private/Balance"
 
 # Choose pair
 pair <- "ETHEUR"
-
 
 # 1. Get the OHLC - Repeat this call every x interval
 what <- tryCatch(
@@ -110,7 +109,7 @@ if (length(tp) == 0) {
 }
 
 # Ultimate stop loss
-ult_sl <- tail(da$close[da$action == "buy"][!is.na(da$close[da$action == "buy"])], 1) - stoploss_trail * tail(da$close[da$action == "buy"][!is.na(da$close[da$action == "buy"])], 1)
+ult_sl <- tail(da$close[da$action == "buy"][!is.na(da$close[da$action == "buy"])], 1) - stoploss_ult * tail(da$close[da$action == "buy"][!is.na(da$close[da$action == "buy"])], 1)
 
 if (length(ult_sl) == 0) {
   ult_sl <- 0
@@ -175,7 +174,7 @@ da$trail_sl[nrow(da)] <- trail_sl
 da$exit_condition[nrow(da)] <- da$trail_sl[nrow(da)] > da$close[nrow(da)] | da$ult_sl[nrow(da)] > da$close[nrow(da)] | da$tp[nrow(da)] < da$close[nrow(da)]
 
 if (nrow(da) > 1) {
-    
+  
   # BUY Condition ------------------------------------------------------------
   if ((is.na(da$action[nrow(da) - 1]) | da$action[nrow(da) - 1] %in% c("sell", "no action")) &
       da$deriv[nrow(da)] > 0){  
@@ -239,7 +238,7 @@ if (nrow(da) > 1) {
     da$action[nrow(da)] <- "no action"
     
   }
-print(da)
+
 write.table(da[nrow(da), ], file = "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Trading Module/Trading_Table/da.csv",
             row.names = FALSE,
             col.names = FALSE,
