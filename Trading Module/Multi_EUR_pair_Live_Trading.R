@@ -1,4 +1,4 @@
-rm(list = ls())
+Sys.sleep(15)
 source(paste("/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1", "10 Utils.R", sep = "/"))
 setDTthreads(1)
 
@@ -210,6 +210,6 @@ for (i in 1:length(EUR_pairs)){
               col.names = FALSE,
               append = TRUE,
               sep = ",")
-  Sys.sleep(5)
+  Sys.sleep(4)
 }
   
