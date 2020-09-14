@@ -37,7 +37,7 @@ i <- 1
 
 for (i in 1:length(EUR_pairs)){
   
-  df <- simple_OHLC(interval = 60, pair = EUR_pairs[i])
+  df <- simple_OHLC(interval = 15, pair = EUR_pairs[i])
   
   # Remove last row as its the candle that still ongoing
   df <- df[-nrow(df), ]
@@ -190,8 +190,8 @@ for (i in 1:length(EUR_pairs)){
       da$Units[nrow(da)] <- da$Units[nrow(da) -1]
       da$Price[nrow(da)] <- da$close[nrow(da)]* da$Units[nrow(da)]
       # da$id[nrow(da)] <- sell_it$result$txid
-      da$id[nrow(da)] <- round(runif(1, 10000, 5000000))
-      
+      # da$id[nrow(da)] <- round(runif(1, 10000, 5000000))
+      da$id[nrow(da)] <- da$id[nrow(da)-1]
     } else {
       
       da$action[nrow(da)] <- "no action"

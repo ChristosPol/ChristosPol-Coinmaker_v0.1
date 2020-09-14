@@ -9,15 +9,15 @@ candles_recent <- candles
 # 
 # training data here is not the traditional training set, but more of a 
 # placeholder initial dataset to calculate the indicators
-train_n <- ceiling(nrow(candles_recent) / 30)
+train_n <- ceiling(nrow(candles_recent) / 40)
 train_data <- candles_recent[1:train_n, ]
 test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 
-myresult <- Splines_Tangent(spar = 0.95, 
+myresult <- Splines_Tangent(spar = 0.8, 
                             takeprofit = 0.015,
                             stoploss_trail = 1,
                             stoploss_ult = 1,
-                            plot.it = F)
+                            plot.it = T)
 calculate_profits(myresult)
 win_ratio(myresult)
 View(na.omit(myresult$Price))

@@ -18,7 +18,7 @@ API_Sign <- as.character(api_info$API_Sign)
 # pair <- "BTCEUR"
 # pair <- "XETHZEUR"
 # pair <- "LSKEUR"
-pair <- "XDGEUR"
+pair <- "ATOMEUR"
 
 # Path to save results0
 data_path <- "/media/chris/DATA/Documents/Bot_Trading/Historical_data"
@@ -32,7 +32,7 @@ pair_data_results <- paste(data_path, pair, sep ="/")
 # Choose initial ID for the first pull
 # Either select a period in actual days
 options("width" = 60)
-v <- nanotime(Sys.time() - as.difftime(30, unit = "days"))
+v <- nanotime(Sys.time() - as.difftime(40, unit = "days"))
 initial_id <- as.integer64(v)
 
 # Or pull from last ID
