@@ -45,7 +45,7 @@ for (i in 1:length(EUR_pairs)){
   stoploss_trail <- params$stoploss_trail
   stoploss_ult <- params$stoploss_ult
   
-  df <- simple_OHLC(interval = 15, pair = EUR_pairs[i])
+  df <- simple_OHLC(interval = 60, pair = EUR_pairs[i])
   
   # Remove last row as its the candle that still ongoing
   df <- df[-nrow(df), ]
