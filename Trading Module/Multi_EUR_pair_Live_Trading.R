@@ -9,13 +9,8 @@ API_Sign <- as.character(api_info$API_Sign)
 avail_pairs <- myfun("https://api.kraken.com/0/public/AssetPairs", secret = API_Sign, key = API_Key)
 all_pairs <- names(avail_pairs[[2]])
 
-# Parameters
-spar <- 0.95
-takeprofit <- 0.015 
-stoploss_trail <- 1
-stoploss_ult <- 1
-
 trading_table_path <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Trading Module/Trading_Table/"
+params_path <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Parameter optimization/Parameters_multi/"
 
 # Get only EUR related crypto pairs
 EUR_pairs <- grep("EUR", all_pairs, value = T)
@@ -33,9 +28,22 @@ to_remove <- grep(paste(c("USD",
                           "DAI",
                           "BAT"), collapse ="|"), EUR_pairs, value = T)
 EUR_pairs <- EUR_pairs[!EUR_pairs %in% to_remove]
-i <- 1
+i <- 3
 
 for (i in 1:length(EUR_pairs)){
+  
+  # Parameters
+  params <- read.table(list.files(paste0(params_path, EUR_pairs[i]), full.names = T),
+                       header = FALSE,
+                       sep = ",", stringsAsFactors = FALSE)
+  
+  colnames(params) <- c("spar", "takeprofit", "stoploss_trail", "stoploss_ult",
+                        "winratio", "pr", "cl_pr", "n", "time")
+  
+  spar <- params$spar
+  takeprofit <- params$takeprofit 
+  stoploss_trail <- params$stoploss_trail
+  stoploss_ult <- params$stoploss_ult
   
   df <- simple_OHLC(interval = 15, pair = EUR_pairs[i])
   

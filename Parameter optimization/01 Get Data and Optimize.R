@@ -39,12 +39,12 @@ to_remove <- grep(paste(c("USD",
                           "DAI",
                           "BAT"), collapse ="|"), EUR_pairs, value = T)
 EUR_pairs <- EUR_pairs[!EUR_pairs %in% to_remove]
-i <-2
+
 for (i in 1:length(EUR_pairs)) {
 
   pair <- EUR_pairs[i]
   # set  fake budget
-  initial_budget <- 500
+  initial_budget <- 20
   
   # Create parameter pair directory
   dir.create(paste(param_path, pair, sep = "/"), showWarnings = FALSE)
@@ -60,7 +60,7 @@ for (i in 1:length(EUR_pairs)) {
   
   # Select time in epoch
   options("width" = 60)
-  v <- nanotime(Sys.time() - as.difftime(40, unit = "days"))
+  v <- nanotime(Sys.time() - as.difftime(60, unit = "days"))
   initial_id <- as.integer64(v)
   
   # Pull historical trades since initial id from epoch time
@@ -105,8 +105,8 @@ for (i in 1:length(EUR_pairs)) {
   # Define parameters to loop over
   spar <- data.frame(spar = seq(0.7, 1, 0.05), flag = 1)
   takeprofit <- data.frame(takeprofit = c(0.01, 0.015, 0.02), flag = 1)
-  stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.02, 0.05, 1), flag = 1)
-  stoploss_ult <- data.frame(stoploss_ult = c(0.01, 0.02, 0.05, 1), flag = 1)
+  stoploss_trail <- data.frame(stoploss_trail = c(0.02, 0.05, 1), flag = 1)
+  stoploss_ult <- data.frame(stoploss_ult = c(0.02, 0.05, 1), flag = 1)
   
   testing_params <- left_join(spar, takeprofit) %>%
     left_join(stoploss_trail)%>% left_join(stoploss_ult)
@@ -117,7 +117,7 @@ for (i in 1:length(EUR_pairs)) {
   library("doParallel")
   library("foreach")
   paraller_exec <- TRUE
-  cl <- parallel::makeForkCluster(2)
+  cl <- parallel::makeForkCluster(3)
   doParallel::registerDoParallel(cl)
   start_time <- Sys.time()
   results <- foreach(i = 1:nrow(testing_params), .combine = 'rbind') %dopar% {
@@ -144,14 +144,22 @@ for (i in 1:length(EUR_pairs)) {
   parallel::stopCluster(cl)
   
   # Sloppy solution for fees
-  results$clean_profit <-results$profit - (2*(500*(0.26/100)) * results$n_trades)   
+  results$clean_profit <-results$profit - (2*(20*(0.26/100)) * results$n_trades)   
+  
   best_params <- results$params[which.max(results$clean_profit)]
+  pr <- results$profit[results$params == best_params]
+  cl_pr <- results$clean_profit[results$params == best_params]
+  n <- results$n_trades[results$params == best_params]
+  
   best_params <- strsplit(best_params, "_")
-  best_params <- data.frame(spar = best_params[[1]][1],
+  best_params  <- data.frame(spar = best_params[[1]][1],
                             takeprofit = best_params[[1]][2],
                             stoploss_trail = best_params[[1]][3],
                             stoploss_ult = best_params[[1]][4],
                             winratio = best_params[[1]][5],
+                            pr = pr,
+                            cl_pr = cl_pr,
+                            n  = n,
                             time = timestamp())
   
   write.table(best_params, file = paste(pair_param_results, paste0(pair, "_bestparams.csv"), sep ="/" ),

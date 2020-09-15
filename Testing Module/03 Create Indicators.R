@@ -13,8 +13,8 @@ train_n <- ceiling(nrow(candles_recent) / 40)
 train_data <- candles_recent[1:train_n, ]
 test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 
-myresult <- Splines_Tangent(spar = 0.8, 
-                            takeprofit = 0.015,
+myresult <- Splines_Tangent(spar = 1, 
+                            takeprofit = 0.02,
                             stoploss_trail = 1,
                             stoploss_ult = 1,
                             plot.it = T)

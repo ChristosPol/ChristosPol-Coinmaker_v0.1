@@ -18,7 +18,7 @@ API_Sign <- as.character(api_info$API_Sign)
 # pair <- "BTCEUR"
 # pair <- "XETHZEUR"
 # pair <- "LSKEUR"
-pair <- "ATOMEUR"
+pair <- "GNOEUR"
 
 # Path to save results0
 data_path <- "/media/chris/DATA/Documents/Bot_Trading/Historical_data"
