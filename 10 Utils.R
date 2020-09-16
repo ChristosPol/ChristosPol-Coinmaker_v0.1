@@ -327,6 +327,9 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.i
       plot(fut$deriv, type ="l", main = paste0("sign: ",
                                                " sign deriv: ", fut$sign_derivs[nrow(fut)], " deriv ", fut$deriv[nrow(fut)]))
       abline(h = 0, col = "red", lty = 5, lwd = 2)
+      # plot(fut$volume, type ="l")
+      # plot(fut$ratio_volume, type ="l")
+      # abline(h =0.50, col ="red")
     }
     
     # Exit condition for takeprofit  - Fixed

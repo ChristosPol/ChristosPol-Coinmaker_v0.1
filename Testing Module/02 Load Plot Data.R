@@ -18,16 +18,24 @@ frame[, miscellaneous := NULL]
 frame1 <- unique(frame)
 
 # frame1 <- subset(frame1, frame1$Date >= "2019-12-01" & frame1$Date <= "2020-06-01")
-# frame1 <- subset(frame1, frame1$Date >= "2020-08-01")
+frame1 <- subset(frame1, frame1$Date >= "2019-01-01")
 
 
 # Select interval
 frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '60 minutes') , format = '%H:%M:%S')]
 
+volumes <- frame1[, .(volume_freq = sum(volume)),
+                  by = .(Date, interval, buy_sell)]
+
+volumes_ratio <- volumes[, .(ratio_volume =  volume_freq[buy_sell  =="b"] / sum(volume_freq) ),
+                  by = .(Date, interval)]
+
 # Create candle stick dataset
 candles <- frame1[, .(high = max(price), low = min(price), open = first(price),
                        close = last(price), volume = sum(volume)),
                   by = .(Date, interval)]
+candles <- merge(candles, volumes_ratio, by = c("Date", "interval"))
+
 dim(candles)
 
 # Plot asset and select how many intervals 
