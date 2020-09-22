@@ -22,3 +22,5 @@ all_trade_tables$Price_all <- all_trade_tables$close*all_trade_tables$Units
 rownames(all_trade_tables) <- NULL
 View(all_trade_tables)
 View(subset(all_trade_tables, all_trade_tables$action %in% c("buy", "sell")))
+
+all_trade_tables <- as.data.table(all_trade_tables)

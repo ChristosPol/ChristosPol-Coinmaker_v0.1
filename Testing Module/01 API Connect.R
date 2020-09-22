@@ -15,8 +15,8 @@ API_Key <- as.character(api_info$API_Key)
 API_Sign <- as.character(api_info$API_Sign)
 
 # Choose pair
-pair <- "BTCEUR"
-# pair <- "XETHZEUR"
+# pair <- "BTCEUR"
+pair <- "XETHZEUR"
 # pair <- "LSKEUR"
 # pair <- "GNOEUR"
 
@@ -36,7 +36,7 @@ v <- nanotime(Sys.time() - as.difftime(40, unit = "days"))
 initial_id <- as.integer64(v)
 
 # Or pull from last ID
-initial_id <- 1599219148948374533
+initial_id <- 1599667970469055583
 initial_id <- as.numeric(as.character(initial_id))
 
 # Pull historical trades since initial id from epoch time

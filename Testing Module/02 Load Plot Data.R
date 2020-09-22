@@ -46,6 +46,7 @@ abline(h = candles$close[nrow(candles)], lty = "dashed", col = "blue")
 
 p1 <- ggplot(data= candles, aes(x=1:nrow(candles), y=close)) +
   geom_line(alpha = 0.5);p1
+
 # Remove and clean
 rm(frame)
 rm(frame1)

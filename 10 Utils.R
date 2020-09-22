@@ -265,10 +265,11 @@ get_balance <- function (url, key, secret) {
 }
 
 # Splines trend inversion
-Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.it) {
+Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.it, rsi_period) {
   
   # Train and test datasets
-  train_data[, c("x",
+  train_data[, c("RSI",
+                 "x",
                  "spline",
                  "deriv",
                  "sign_derivs",
@@ -280,9 +281,10 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.i
                  "tp",
                  "ult_sl",
                  "trail_sl",
-                 "id") := list(NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                 "id") := list(NA, NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
-  test_data[, c("x",
+  test_data[, c("RSI",
+                "x",
                 "spline",
                 "deriv",
                 "sign_derivs",
@@ -294,13 +296,14 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.i
                 "tp",
                 "ult_sl",
                 "trail_sl",
-                "id") := list(NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                "id") := list(NA,NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
   # Going intro the loop for test data -----------------------------------------
   for (i in 1:nrow(test_data)){
     
     fut <- rbind(train_data, test_data[i, ])
     fut$x <- 1:nrow(fut)
+    fut$RSI <- RSI(fut$close, n = rsi_period)
     # Calculate spline - derivative
     smoothingSpline = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar)
     fut[, spline := predict(smoothingSpline)$y]
@@ -312,7 +315,9 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.i
     
     if(plot.it == TRUE){
       
-      fut <- tail(fut, 200)
+      sr <- SR_lines(fut, roll = 100, Ns = nrow(fut), n_sort = 15, pair = pair,plot.it = F)
+      
+      fut <- tail(fut, 250)
       df_points_buy <- data.frame(x = na.omit(fut$x[fut$action =="buy"]),
                               y = na.omit(fut$close[fut$action =="buy"]))
       df_points_sell <- data.frame(x = na.omit(fut$x[fut$action =="sell"]),
@@ -323,13 +328,14 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.i
       lines(fut$spline, col ="red")
       points(df_points_buy$x, df_points_buy$y, col ="green", pch = 19)
       points(df_points_sell$x, df_points_sell$y, col ="red", pch = 19)
-  
+      abline(h = sr$SL)
+      abline(h =sr$RL)
       plot(fut$deriv, type ="l", main = paste0("sign: ",
                                                " sign deriv: ", fut$sign_derivs[nrow(fut)], " deriv ", fut$deriv[nrow(fut)]))
       abline(h = 0, col = "red", lty = 5, lwd = 2)
-      # plot(fut$volume, type ="l")
-      # plot(fut$ratio_volume, type ="l")
-      # abline(h =0.50, col ="red")
+      # plot(fut$RSI, type ="l")
+      # abline(h = 80,  col = "red", lty = 5, lwd = 2)
+      
     }
     
     # Exit condition for takeprofit  - Fixed
@@ -382,7 +388,7 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.i
     
     # Buy condition
     if ( (is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("sell", "no action")) &
-         fut$deriv[nrow(fut)] > 0) {
+         (fut$deriv[nrow(fut)] > 0 )) {
       
       fut$action[nrow(fut)] <- "buy"
       fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
@@ -425,10 +431,13 @@ Splines_Tangent <- function(takeprofit, stoploss_trail,stoploss_ult, spar,plot.i
 
 
 # Strategy using volumes spikes and RSI oversold conditions
-Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprofit, stoploss_trail,stoploss_ult, times_vol) {
+Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume,
+                                     takeprofit, stoploss_trail,stoploss_ult,
+                                     times_vol, plot.it) {
   
   # Train and test datasets
-  train_data[, c("SMA",
+  train_data[, c("x",
+                 "SMA",
                  "RSI",
                  "EMA_volume",
                  "exit_value",
@@ -442,9 +451,10 @@ Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprof
                  "tp",
                  "ult_sl",
                  "trail_sl",
-                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                 "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
-  test_data[, c("SMA",
+  test_data[, c("x",
+                "SMA",
                 "RSI",
                 "EMA_volume",
                 "exit_value",
@@ -458,7 +468,7 @@ Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprof
                 "tp",
                 "ult_sl",
                 "trail_sl",
-                "id") := list(NA, NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                "id") := list(NA, NA, NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
   
   # Going intro the loop for test data -----------------------------------------
   for (i in 1:nrow(test_data)){
@@ -468,14 +478,37 @@ Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprof
     # RSI and Volume
     fut$RSI <- RSI(fut$close, n = RSI_Period)
     fut$EMA_volume <- EMA(fut$volume, n = EMA_volume)
-
+    fut$x <- 1:nrow(fut)
+    
     # Volume Crossing of volume over the SMA(volume, n_periods)
     fut$crossover_volume[nrow(fut)] <- ifelse(fut$volume[nrow(fut)] > fut$EMA_volume[nrow(fut)] * times_vol ,
                                               "volume_higher", "volume_lower")
     # RSI Crossing of upper or lower bounds
     fut$crossover_RSI[nrow(fut)] <- ifelse(fut$RSI[nrow(fut)] < RSI_below ,
                                            "RSI_lower", "RSI_higher")
+    if(plot.it == TRUE){
     
+      plot_df <- tail(fut, 200)
+      df_points_buy <- data.frame(x = na.omit(plot_df$x[plot_df$action =="buy"]),
+                                  y = na.omit(plot_df$close[plot_df$action =="buy"]))
+      df_points_sell <- data.frame(x = na.omit(plot_df$x[plot_df$action =="sell"]),
+                                   y = na.omit(plot_df$close[plot_df$action == "sell"]))
+      
+      par(mfrow = c(3, 1))
+      plot(plot_df$close, type ="l", main = paste0("profits = ", tail(na.omit(plot_df$Price), 1)))
+      # lines(plot_df$spline, col ="red")
+      points(rownames(plot_df)[plot_df$x %in% df_points_buy$x], df_points_buy$y, col ="green", pch = 19)
+      points(rownames(plot_df)[plot_df$x %in% df_points_sell$x], df_points_sell$y, col ="red", pch = 19)
+      
+      plot(plot_df$RSI, type ="l")
+      abline(h = RSI_below,  col = "red", lty = 5, lwd = 2)
+      
+      plot(plot_df$volume, type ="l")
+      # lines(plot_df$EMA_volume,  col = "red", lty = 5, lwd = 2)
+      abline(h = plot_df$EMA_volume[nrow(plot_df)],  col = "red", lty = 5, lwd = 2)
+    }
+    
+
     # Exit condition for takeprofit  - Fixed
     tp <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) + takeprofit * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
     
@@ -558,7 +591,11 @@ Pure_RSI_Volume_Trailing <- function(RSI_Period, RSI_below, EMA_volume, takeprof
     }
     
     train_data <- fut
-    print(i)
+    # print(i)
+    if(plot.it == TRUE){
+      Sys.sleep(0.1)
+      # flush.console()
+    }
   }
   return(train_data)
 }
@@ -830,6 +867,310 @@ MACD_long <- function(EMA_Trend, nfast, nslow, nsig, stoploss, takeprofit) {
 }
 
 
+calculate_profits_LS <- function(dataset, params){
+  
+  calcu <- dataset[action %in% c("enter_long", "enter_short", "exit_long", "exit_short"), ]
+  calcu <- subset(calcu,  !calcu$id %in% names(which(table(calcu$id) ==1)))
+  if (nrow(calcu) > 0) {
+    
+    profit_long <- c()
+    profit_short <- c()
+    profit_sum <- c()
+    ids_long <- unique(calcu$id[calcu$action %in% c("enter_long", "exit_long")])
+    ids_short <- unique(calcu$id[calcu$action %in% c("enter_short", "exit_short")])
+    for(i in 1:length(ids_long)){
+      
+      profit_long[i] <- calcu$equity[calcu$action =="exit_long" & calcu$id == ids_long[i]] - calcu$Price[calcu$action =="enter_long" & calcu$id == ids_long[i]] 
+    }
+    
+    for(i in 1:length(ids_short)){
+      
+      profit_short[i] <- calcu$equity[calcu$action =="exit_short" & calcu$id == ids_short[i]] - calcu$Price[calcu$action =="enter_short" & calcu$id == ids_short[i]] 
+    }
+    
+    profit_sum_long <- sum(profit_long)
+    profit_sum_short <- sum(profit_short)
+    profit_sum <- profit_sum_long +  profit_sum_short
+    dd <- data.frame(profit_sum_long = profit_sum_long, profit_sum_short = profit_sum_short, profit = profit_sum, n_trades = length(unique(calcu$id)),
+                     enter_date = unique(calcu$Date)[1], exit_date = tail(unique(calcu$Date), 1))
+  } else {
+    
+    dd <- data.frame(profit = 0, n_trades = 0, enter_date = as.Date("2020-04-07"), exit_date =as.Date("2020-04-07"))
+  }
+  
+  if(paraller_exec ==TRUE){
+    dd$params <- params
+  }
+  
+  write.table(dd, "/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv",
+              sep = ",", row.names = FALSE, col.names = !file.exists("/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv"), append = T)  
+  return(dd)
+}
+
+
+
+
+
+
+# Splines trend inversion
+Splines_Tangent_SL <- function(takeprofit, stoploss_trail, stoploss_ult, spar, plot.it, rsi_period) {
+  
+  # Train and test datasets
+  train_data[, c("rsi",
+                 "x",
+                 "spline",
+                 "deriv",
+                 "sign_derivs",
+                 "change_sign",
+                 "exit_condition_long",
+                 "exit_condition_short",
+                 "action",
+                 "Units",
+                 "Price",
+                 "equity",
+                 "tp_long",
+                 "ult_sl_long",
+                 "trail_sl_long",
+                 "tp_short",
+                 "ult_sl_short",
+                 "trail_sl_short",
+                 "id") := list(NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+                               NA, NA, NA, NA, NA) ]
+  
+  test_data[, c("rsi",
+                "x",
+                "spline",
+                "deriv",
+                "sign_derivs",
+                "change_sign",
+                "exit_condition_long",
+                "exit_condition_short",
+                "action",
+                "Units",
+                "Price",
+                "equity",
+                "tp_long",
+                "ult_sl_long",
+                "trail_sl_long",
+                "tp_short",
+                "ult_sl_short",
+                "trail_sl_short",
+                "id") := list(NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+                              NA, NA, NA, NA, NA) ]
+  
+  # Going intro the loop for test data -----------------------------------------
+  for (i in 1:nrow(test_data)){
+    
+    fut <- rbind(train_data, test_data[i, ])
+    fut$x <- 1:nrow(fut)
+    fut$rsi <- RSI(fut$close, n = rsi_period)
+    # Calculate spline - derivative
+    smoothingSpline = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar)
+    fut[, spline := predict(smoothingSpline)$y]
+    fut[, deriv := predict(smoothingSpline, deriv = 1)$y]
+    
+    # Sign of deriv - [-2 for desc, 2 for asc] 
+    fut[, sign_derivs := c(sign(deriv))]
+    fut[, change_sign := c(0, diff(sign(deriv)))]
+    
+    if(plot.it == TRUE){
+      
+      fut <- tail(fut, 200)
+      df_points_enter_long <- data.frame(x = na.omit(fut$x[fut$action =="enter_long"]),
+                                         y = na.omit(fut$close[fut$action =="enter_long"]))
+      df_points_exit_long <- data.frame(x = na.omit(fut$x[fut$action =="exit_long"]),
+                                        y = na.omit(fut$close[fut$action =="exit_long"]))
+      
+      df_points_enter_short <- data.frame(x = na.omit(fut$x[fut$action =="enter_short"]),
+                                          y = na.omit(fut$close[fut$action == "enter_short"]))
+      df_points_exit_short <- data.frame(x = na.omit(fut$x[fut$action =="exit_short"]),
+                                         y = na.omit(fut$close[fut$action == "exit_short"]))
+      
+      par(mfrow = c(3, 1))
+      plot(fut$close, type ="l", main = paste0("profits = ", tail(na.omit(fut$equity), 1)))
+      lines(fut$spline, col ="red")
+      points(df_points_enter_long$x, df_points_enter_long$y, col ="green", pch = 19)
+      points(df_points_exit_long$x, df_points_exit_long$y, col ="red", pch = 19)
+      
+      points(df_points_enter_short$x, df_points_enter_short$y, col ="blue", pch = 19)
+      points(df_points_exit_short$x, df_points_exit_short$y, col ="black", pch = 19)
+      
+      plot(fut$deriv, type ="l", main = paste0("sign: ",
+                                               " sign deriv: ", fut$sign_derivs[nrow(fut)], " deriv ", fut$deriv[nrow(fut)]))
+      abline(h = 0, col = "red", lty = 5, lwd = 2)
+      plot(fut$rsi, type ="l")
+      abline(h =30, col ="red")
+      abline(h =70, col ="red")
+    }
+    
+    # Exit condition for long trades -------------------------------------------
+    tp_long <- tail(fut$close[fut$action == "enter_long"][!is.na(fut$close[fut$action == "enter_long"])], 1) + takeprofit * tail(fut$close[fut$action == "enter_long"][!is.na(fut$close[fut$action == "enter_long"])], 1)
+    
+    if (length(tp_long) == 0) {
+      tp_long <- 0
+    }
+    
+    # Ultimate stop loss
+    ult_sl_long <- tail(fut$close[fut$action == "enter_long"][!is.na(fut$close[fut$action == "enter_long"])], 1) - stoploss_ult * tail(fut$close[fut$action == "enter_long"][!is.na(fut$close[fut$action == "enter_long"])], 1)
+    
+    if (length(ult_sl_long) == 0) {
+      ult_sl_long <- 0
+    }
+    
+    
+    
+    if (fut$action[nrow(fut)-1] %in% c("enter_long", "keep_long") & ( fut$close[nrow(fut)] > fut$close[nrow(fut)-1] )  ){
+      
+      trail_sl_long <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
+      if( trail_sl_long < tail(fut$trail_sl_long[!is.na(fut$trail_sl_long)], 1)){
+        trail_sl_long <- tail(fut$trail_sl_long[!is.na(fut$trail_sl_long)], 1)
+        
+      }else {
+        trail_sl_long <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
+        
+      }
+      
+      
+    } else if (fut$action[nrow(fut)-1] %in% c("enter_long", "keep_long") & ( fut$close[nrow(fut)] <= fut$close[nrow(fut)-1] ) ){
+      
+      trail_sl_long <- tail(fut$trail_sl_long[!is.na(fut$trail_sl_long)], 1)
+    } else {
+      
+      trail_sl_long <-0
+    }
+    
+    
+    fut$tp_long[nrow(fut)] <- tp_long
+    fut$ult_sl_long[nrow(fut)] <- ult_sl_long
+    fut$trail_sl_long[nrow(fut)] <- trail_sl_long
+    
+    # Exit condition for short trades ------------------------------------------
+    tp_short <- tail(fut$close[fut$action == "enter_short"][!is.na(fut$close[fut$action == "enter_short"])], 1) - takeprofit * tail(fut$close[fut$action == "enter_short"][!is.na(fut$close[fut$action == "enter_short"])], 1)
+    
+    if (length(tp_short) == 0) {
+      tp_short <- 0
+    }
+    
+    # Ultimate stop loss
+    ult_sl_short <- tail(fut$close[fut$action == "enter_short"][!is.na(fut$close[fut$action == "enter_short"])], 1) + stoploss_ult * tail(fut$close[fut$action == "enter_short"][!is.na(fut$close[fut$action == "enter_short"])], 1)
+    
+    if (length(ult_sl_short) == 0) {
+      ult_sl_short <- 0
+    }
+    
+    
+    
+    if (fut$action[nrow(fut)-1] %in% c("enter_short", "keep_short") & ( fut$close[nrow(fut)] < fut$close[nrow(fut)-1] )  ){
+      
+      trail_sl_short <- fut$close[nrow(fut)] + stoploss_trail * fut$close[nrow(fut)]
+      
+      if( trail_sl_short > tail(fut$trail_sl_short[!is.na(fut$trail_sl_short)], 1)){
+        trail_sl_short <- tail(fut$trail_sl_short[!is.na(fut$trail_sl_short)], 1)
+        
+      } else {
+        trail_sl_short <- fut$close[nrow(fut)] + stoploss_trail * fut$close[nrow(fut)]
+        
+      }
+      
+      
+    } else if (fut$action[nrow(fut)-1] %in% c("enter_short", "keep_short") & ( fut$close[nrow(fut)] >= fut$close[nrow(fut)-1] ) ){
+      
+      trail_sl_short <- tail(fut$trail_sl_short[!is.na(fut$trail_sl_short)], 1)
+    } else {
+      
+      trail_sl_short <-1000000
+    }
+    
+    
+    fut$tp_short[nrow(fut)] <- tp_short
+    fut$ult_sl_short[nrow(fut)] <- ult_sl_short
+    fut$trail_sl_short[nrow(fut)] <- trail_sl_short
+    
+    
+    fut$exit_condition_long[nrow(fut)] <- fut$trail_sl_long[nrow(fut)] > fut$close[nrow(fut)] | fut$ult_sl_long[nrow(fut)] > fut$close[nrow(fut)] | fut$tp_long[nrow(fut)] < fut$close[nrow(fut)]
+    fut$exit_condition_short[nrow(fut)] <- fut$trail_sl_short[nrow(fut)] < fut$close[nrow(fut)] | fut$ult_sl_short[nrow(fut)] < fut$close[nrow(fut)] | fut$tp_short[nrow(fut)] > fut$close[nrow(fut)]
+    
+    
+    # Deciding upon action -----------------------------------------------------
+    
+    # Enter long position ------------------------------------------------------
+    if ( (is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("exit_long", "no action", "exit_short")) &
+         fut$deriv[nrow(fut)] > 0 ) {
+      
+      fut$action[nrow(fut)] <- "enter_long"
+      fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
+      fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)]
+      fut$id[nrow(fut)] <- round(runif(1, 10000, 5000000))
+      fut$equity[nrow(fut)] <- initial_budget
+      # Exit long position -----------------------------------------------------
+    } else if (fut$action[nrow(fut) - 1] %in% c("keep_long", "enter_long") & (
+      fut$exit_condition_long[nrow(fut)] == TRUE | fut$deriv[nrow(fut)] < 0 )) {
+      
+      fut$action[nrow(fut)] <- "exit_long"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
+      fut$Price[nrow(fut)] <- fut$close[nrow(fut)]* fut$Units[nrow(fut)]
+      # fut$Price[nrow(fut)] <- (tail(fut$Price[fut$action == "exit_long"], 1) - tail(fut$Price[fut$action == "enter_long"], 1)) + tail(fut$Price[fut$action == "enter_long"], 1) 
+      
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      initial_budget <- (tail(fut$Price[fut$action == "exit_long"], 1) - tail(fut$Price[fut$action == "enter_long"], 1)) + tail(fut$Price[fut$action == "enter_long"], 1) 
+      fut$equity[nrow(fut)] <- initial_budget
+      # initial_budget <- tail(fut$Price[fut$action == "enter_long"],1) + (fut$Price[nrow(fut)] - tail(fut$Price[fut$action == "enter_long"], 1))
+      
+      # Keep long position -----------------------------------------------------
+    } else if ( fut$action[nrow(fut) - 1] %in% c("enter_long", "keep_long")   & 
+                fut$exit_condition_long[nrow(fut)] == FALSE  ) {
+      
+      fut$action[nrow(fut)] <- "keep_long"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1 ]
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      
+      # Enter short position ---------------------------------------------------  
+    } else if ((is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("exit_long", "no action", "exit_short")) &
+               fut$deriv[nrow(fut)] < 0  ) {
+      
+      fut$action[nrow(fut)] <- "enter_short"
+      fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
+      fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)]
+      fut$id[nrow(fut)] <- round(runif(1, 10000, 5000000))
+      fut$equity[nrow(fut)] <- initial_budget
+      
+      # Exit short position ----------------------------------------------------
+    } else if(fut$action[nrow(fut) - 1] %in% c("keep_short", "enter_short") & (
+      fut$exit_condition_short[nrow(fut)] == TRUE | fut$deriv[nrow(fut)] > 0 )) {
+      
+      fut$action[nrow(fut)] <- "exit_short"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
+      fut$Price[nrow(fut)] <- fut$close[nrow(fut)]* fut$Units[nrow(fut)]
+      # fut$Price[nrow(fut)] <- (tail(fut$Price[fut$action == "enter_short"], 1) - tail(fut$Price[fut$action == "exit_short"], 1)) + tail(fut$Price[fut$action == "enter_short"], 1)
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      initial_budget <- (tail(fut$Price[fut$action == "enter_short"], 1) - tail(fut$Price[fut$action == "exit_short"], 1)) + tail(fut$Price[fut$action == "enter_short"], 1)
+      fut$equity[nrow(fut)] <- initial_budget
+      # initial_budget <- tail(fut$Price[fut$action == "enter_short"], 1) + (tail(fut$Price[fut$action == "enter_short"],1) - (fut$Price[nrow(fut)]))
+      # initial_budget <- fut$Price[nrow(fut)]
+      
+      # Keep short position ----------------------------------------------------
+    } else if(fut$action[nrow(fut) - 1] %in% c("enter_short", "keep_short")   & 
+              fut$exit_condition_short[nrow(fut)] == FALSE  ) {
+      
+      
+      fut$action[nrow(fut)] <- "keep_short"
+      fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1 ]
+      fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
+      
+    } else {
+      
+      fut$action[nrow(fut)] <- "no action"  
+    }
+    
+    train_data <- fut
+    # print(i)
+    if(plot.it == TRUE){
+      Sys.sleep(0.8)
+      # flush.console()
+    }
+  }
+  return(train_data)
+}
 
 
 # Strategy  --------------------------------------------------------------------
@@ -2818,7 +3159,10 @@ calculate_profits <- function(dataset, params){
     profit[i] <-   calcu$Price[calcu$action =="sell" & calcu$id == ids[i]] - calcu$Price[calcu$action =="buy" & calcu$id == ids[i]] 
   }
   profit_sum <- sum(profit)
-  dd <- data.frame(profit = profit_sum, n_trades = length(unique(calcu$id)),
+  
+  dd <- data.frame(profit = profit_sum, n_trades = length(unique(calcu$id)), biggest_lost =min(profit),
+                   biggest_win = max(profit),avg_loss = mean(profit[profit < 0]),
+                   avg_win = mean(profit[profit > 0]), winratio = win_ratio(myresult),
                    enter_date = unique(calcu$Date)[1], exit_date = tail(unique(calcu$Date), 1))
   } else {
     

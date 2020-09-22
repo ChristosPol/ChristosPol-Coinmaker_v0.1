@@ -10,10 +10,14 @@ params <- read.table("/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Par
            sep = ",", stringsAsFactors = FALSE)
 
 # Set parameters
-spar = params$spar[nrow(params)]
+RSI_Period = params$RSI_Period[nrow(params)]
+EMA_volume = params$EMA_volume[nrow(params)]
+RSI_below = params$RSI_below[nrow(params)]
 takeprofit = params$takeprofit[nrow(params)]
 stoploss_trail = params$stoploss_trail[nrow(params)]
 stoploss_ult = params$stoploss_ult[nrow(params)]
+times_vol = params$times_vol[nrow(params)]
+
 options(digits = 5)
 interval <- 60
 
@@ -62,30 +66,35 @@ df$systemtime[nrow(df)] <- as.character(Sys.time())
   
 # 2. Add Indicators
 df[, c("x",
-       "spline",
-       "deriv",
-       "sign_derivs",
-       "change_sign",
-       "exit_condition",
-       "action",
-       "Units",
-       "Price",
-       "tp",
-       "ult_sl",
-       "trail_sl",
-       "id") := list(NA,NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+      "SMA",
+      "RSI",
+      "EMA_volume",
+      "exit_value",
+      "exit_condition",
+      "crossover_volume",
+      "crossover_RSI",
+      "Slope",
+      "action",
+      "Units",
+      "Price",
+      "tp",
+      "ult_sl",
+      "trail_sl",
+      "id") := list(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
 
 df$action <- as.character(df$action)
 
+# RSI and Volume
+df$RSI <- RSI(df$close, n = RSI_Period)
+df$EMA_volume <- EMA(df$volume, n = EMA_volume)
 df$x <- 1:nrow(df)
-# Calculate spline - derivative
-smoothingSpline = smooth.spline(df[, close] ~ as.numeric(rownames(df)), spar = spar)
-df[, spline := predict(smoothingSpline)$y]
-df[, deriv := predict(smoothingSpline, deriv = 1)$y]
 
-# Sign of deriv - [-2 for desc, 2 for asc] 
-df[, sign_derivs := c(sign(deriv))]
-df[, change_sign := c(0, diff(sign(deriv)))]
+# Volume Crossing of volume over the SMA(volume, n_periods)
+df$crossover_volume[nrow(df)] <- ifelse(df$volume[nrow(df)] > df$EMA_volume[nrow(df)] * times_vol ,
+                                          "volume_higher", "volume_lower")
+# RSI Crossing of upper or lower bounds
+df$crossover_RSI[nrow(df)] <- ifelse(df$RSI[nrow(df)] < RSI_below ,
+                                       "RSI_lower", "RSI_higher")
 
 lastrow <- df[nrow(df), ]
 
@@ -164,8 +173,6 @@ if(length(trail_sl) == 0 ){
 #   trail_sl <- 0
 # }
 
-
-
 da$tp[nrow(da)] <- tp
 da$ult_sl[nrow(da)] <- ult_sl
 da$trail_sl[nrow(da)] <- trail_sl
@@ -177,20 +184,21 @@ if (nrow(da) > 1) {
   
   # BUY Condition ------------------------------------------------------------
   if ((is.na(da$action[nrow(da) - 1]) | da$action[nrow(da) - 1] %in% c("sell", "no action")) &
-      da$deriv[nrow(da)] > 0){  
+      (da$crossover_volume[nrow(da)] == "volume_higher" &  da$crossover_RSI[nrow(da)] == "RSI_lower") ){  
       
       # get initial balance in EUR
-      # init_balance <- get_balance(url = "https://api.kraken.com/0/private/Balance",
-      #                             key = API_Key, secret = API_Sign)
-      # initial_budget <- as.numeric(init_balance$result$ZEUR)
-      # initial_budget <- initial_budget - 10
-      initial_budget <- 500
-      # Give API Order to buy at market
-      # buy_it <- add_market_order(url = "https://api.kraken.com/0/private/AddOrder",
-      #                            key = API_Key, secret = API_Sign, pair = pair, type = "buy",
-      #                            ordertype = "market", volume = initial_budget / da$close[nrow(da)])
+      init_balance <- get_balance(url = "https://api.kraken.com/0/private/Balance",
+                                  key = API_Key, secret = API_Sign)
+      initial_budget <- as.numeric(init_balance$result$ZEUR)
+      # $result$XETH
+      initial_budget <- initial_budget - 10
+      # initial_budget <- 500
       
-      # print(buy_it)
+      # Give API Order to buy at market
+      buy_it <- add_market_order(url = "https://api.kraken.com/0/private/AddOrder",
+                                 key = API_Key, secret = API_Sign, pair = pair, type = "buy",
+                                 ordertype = "market", volume = initial_budget / da$close[nrow(da)])
+      
       da$action[nrow(da)] <- "buy"
       da$Units[nrow(da)] <- initial_budget / da$close[nrow(da)]
       da$Price[nrow(da)] <- da$Units[nrow(da)]*da$close[nrow(da)]
@@ -207,24 +215,23 @@ if (nrow(da) > 1) {
       
       # SELL condition 
     } else if (da$action[nrow(da) - 1] %in% c("keep", "buy") & (
-      da$exit_condition[nrow(da)] == TRUE | da$deriv[nrow(da)] < 0 ) ) {
+      da$exit_condition[nrow(da)] == TRUE) ) {
       
       
-      # crypto_hold <- get_balance(url = "https://api.kraken.com/0/private/Balance",
-      #                            key = API_Key, secret = API_Sign)
-      # crypto_hold_eth <- as.numeric(crypto_hold$result$XETH)
+      crypto_hold <- get_balance(url = "https://api.kraken.com/0/private/Balance",
+                                 key = API_Key, secret = API_Sign)
+      crypto_hold_eth <- as.numeric(crypto_hold$result$XETH)
        
       # # Give API Order to buy at market
-      # sell_it <- add_market_order(url = "https://api.kraken.com/0/private/AddOrder",
-      #                             key = API_Key, secret = API_Sign, pair = pair, type = "sell",
-      #                             ordertype = "market", volume = crypto_hold_eth)
+      sell_it <- add_market_order(url = "https://api.kraken.com/0/private/AddOrder",
+                                  key = API_Key, secret = API_Sign, pair = pair, type = "sell",
+                                  ordertype = "market", volume = crypto_hold_eth)
       
-      # print(sell_it)
       da$action[nrow(da)] <- "sell"
       da$Units[nrow(da)] <- da$Units[nrow(da) -1]
       da$Price[nrow(da)] <- da$close[nrow(da)]* da$Units[nrow(da)]
       # da$id[nrow(da)] <- sell_it$result$txid
-      da$id[nrow(da)] <- round(runif(1, 10000, 5000000))
+      da$id[nrow(da)] <- da$id[nrow(da)-1]
       
     } else {
       

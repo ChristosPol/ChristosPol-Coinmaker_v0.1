@@ -1,2 +1,2 @@
-spar,takeprofit,stoploss_trail,stoploss_ult,time
-0.95,0.015,1,1,manual
+RSI_Period,EMA_volume,RSI_below,takeprofit,stoploss_trail,stoploss_ult,times_vol,time
+5,10,45,0.02,0.02,1,1,manual
