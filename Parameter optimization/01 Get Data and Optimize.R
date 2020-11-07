@@ -37,7 +37,20 @@ to_remove <- grep(paste(c("USD",
                           "REP",
                           "PAX",
                           "DAI",
-                          "BAT"), collapse ="|"), EUR_pairs, value = T)
+                          "BAT",
+                          "BAL",
+                          "CRV",
+                          "COMP",
+                          "DOT",
+                          "ICX",
+                          "KAVA",
+                          "SCE",
+                          "STORJ",
+                          "SNX",
+                          "TRX",
+                          "KSM",
+                          "OXT"
+                          ), collapse ="|"), EUR_pairs, value = T)
 EUR_pairs <- EUR_pairs[!EUR_pairs %in% to_remove]
 
 for (i in 1:length(EUR_pairs)) {
@@ -64,7 +77,7 @@ for (i in 1:length(EUR_pairs)) {
   initial_id <- as.integer64(v)
   
   # Pull historical trades since initial id from epoch time
-  hist_trades_pair(sleep = 3, hist_id = initial_id, pair = pair)
+  hist_trades_pair(sleep = 4, hist_id = initial_id, pair = pair)
   
   # Load historical data and optimize
   # Loading Data for operations --------------------------------------------------
@@ -102,15 +115,19 @@ for (i in 1:length(EUR_pairs)) {
   # Dataset that will be treated as test data  
   test_data <- candles[(rows_needed + 1):nrow(candles), ]
   
-  # Define parameters to loop over
-  spar <- data.frame(spar = seq(0.7, 1, 0.05), flag = 1)
-  takeprofit <- data.frame(takeprofit = c(0.01, 0.015, 0.02), flag = 1)
-  stoploss_trail <- data.frame(stoploss_trail = c(0.02, 0.05, 1), flag = 1)
-  stoploss_ult <- data.frame(stoploss_ult = c(0.02, 0.05, 1), flag = 1)
+  # testing parameters
+  RSI_Period <- data.frame(RSI_Period = c(5, 10, 14), flag = 1)
+  EMA_volume <- data.frame(EMA_volume = c(10), flag = 1)
+  RSI_below <- data.frame(RSI_below = c(20,25,30,35, 40, 45, 50, 55), flag = 1)
+  times_vol <- data.frame(times_vol = c(1), flag = 1)
+  takeprofit <- data.frame(takeprofit = c(0.01, 0.015, 0.02, 0.025, 0.03, 0.05, 0.1, 1), flag = 1)
+  stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.015, 0.02, 0.03, 0.05, 1), flag = 1)
+  stoploss_ult <- data.frame(stoploss_ult = c(1), flag = 1)
   
-  testing_params <- left_join(spar, takeprofit) %>%
-    left_join(stoploss_trail)%>% left_join(stoploss_ult)
   
+  testing_params <- left_join(RSI_Period, EMA_volume)%>%
+    left_join(RSI_below)%>% left_join(times_vol)%>% left_join(takeprofit)%>%
+    left_join(stoploss_trail)%>%left_join(stoploss_ult)
   testing_params$flag <- NULL
   testing_params <- as.data.table(testing_params)
   
@@ -121,17 +138,22 @@ for (i in 1:length(EUR_pairs)) {
   doParallel::registerDoParallel(cl)
   start_time <- Sys.time()
   results <- foreach(i = 1:nrow(testing_params), .combine = 'rbind') %dopar% {
-    myresult <- Splines_Tangent(spar = testing_params$spar[i],
-                                takeprofit = testing_params$takeprofit[i],
-                                stoploss_trail = testing_params$stoploss_trail[i],
-                                stoploss_ult = testing_params$stoploss_ult[i],
-                                plot.it = FALSE)
+    myresult <- Pure_RSI_Volume_Trailing(RSI_Period = testing_params$RSI_Period[i],
+                                         EMA_volume = testing_params$EMA_volume[i],
+                                         RSI_below = testing_params$RSI_below[i],
+                                         times_vol = testing_params$times_vol[i],
+                                         takeprofit = testing_params$takeprofit[i],
+                                         stoploss_trail = testing_params$stoploss_trail[i],
+                                         stoploss_ult = testing_params$stoploss_ult[i],
+                                         plot.it = FALSE)
     
-    params <- paste(spar = testing_params$spar[i],
+    params <- paste(RSI_Period = testing_params$RSI_Period[i],
+                    EMA_volume = testing_params$EMA_volume[i],
+                    RSI_below = testing_params$RSI_below[i],
+                    times_vol = testing_params$times_vol[i],
                     takeprofit = testing_params$takeprofit[i],
                     stoploss_trail = testing_params$stoploss_trail[i],
                     stoploss_ult = testing_params$stoploss_ult[i],
-                    stoploss_ult =  round(win_ratio(myresult),2),
                     sep ="_")
     res <- calculate_profits(myresult, params = params)
      

@@ -5,7 +5,8 @@ pair_names <- gsub("_table.csv", "",list.files(trading_table_path))
 
 
 trade_tables <- lapply(dirs, function(x){read.table(x, header = FALSE,
-                                                    sep = ",", stringsAsFactors = FALSE)}  )
+                                                    sep = ",", stringsAsFactors = FALSE)})
+View(trade_tables[[1]])
 names(trade_tables) <- pair_names
 columns <- c("time", "open", "high", "low", "close",         
              "vwap", "volume", "count", "Date_POSIXct", "servertime",    

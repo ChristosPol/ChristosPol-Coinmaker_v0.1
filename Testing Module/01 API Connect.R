@@ -1,5 +1,4 @@
 # Preamble ---------------------------------------------------------------------
-
 # screen -S pull_BTC R
 .rs.restartR()
 rm(list = ls())
@@ -19,7 +18,7 @@ API_Sign <- as.character(api_info$API_Sign)
 pair <- "XETHZEUR"
 # pair <- "LSKEUR"
 # pair <- "GNOEUR"
-
+# pair <- "DASHEUR"
 # Path to save results0
 data_path <- "/media/chris/DATA/Documents/Bot_Trading/Historical_data"
 
@@ -32,12 +31,15 @@ pair_data_results <- paste(data_path, pair, sep ="/")
 # Choose initial ID for the first pull
 # Either select a period in actual days
 options("width" = 60)
-v <- nanotime(Sys.time() - as.difftime(40, unit = "days"))
+v <- nanotime(Sys.time() - as.difftime(10, unit = "days"))
 initial_id <- as.integer64(v)
 
 # Or pull from last ID
-initial_id <- 1599667970469055583
+initial_id <- 1560951439292300000
 initial_id <- as.numeric(as.character(initial_id))
+
+# Or pull since start of time
+initial_id <- 0
 
 # Pull historical trades since initial id from epoch time
 hist_trades_pair(sleep = 3, hist_id = initial_id, pair = pair)

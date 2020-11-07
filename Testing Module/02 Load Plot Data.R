@@ -1,54 +1,22 @@
 # Loading Data for operations --------------------------------------------------
-options(digits = 5)
 
-# Csv file saved with historical trades
-file <- paste0(paste(pair_data_results, pair, sep = "/"), ".csv")
+# Create candlesticks for different intervals
+ticks <- c(5, 60, 2, 4, 6, 12, 24)
+units <- c(rep("minutes", 2), rep("hours", 5))
 
-# Read it
-frame <- fread(file)
-
-# # Fix 
-frame[, Date_POSIXct := anytime(as.numeric(as.character(V3)))]
-frame[, Time := strftime(Date_POSIXct, format = "%H:%M:%S")]
-colnames(frame) <- c("price", "volume", "epoch_time", "buy_sell", "market_limit",
-                     "miscellaneous", "last_id", "Date_POSIXct", "Time")
-frame[, Date := as.Date(Date_POSIXct)]
-frame[, Hour := substr(frame$Time, 1,5)]
-frame[, miscellaneous := NULL]
-frame1 <- unique(frame)
-
-# frame1 <- subset(frame1, frame1$Date >= "2019-12-01" & frame1$Date <= "2020-06-01")
-frame1 <- subset(frame1, frame1$Date >= "2019-01-01")
+ticks <- c(60)
+units <- c(rep("minutes", 1))
 
 
-# Select interval
-frame1[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), '60 minutes') , format = '%H:%M:%S')]
+intervals <- paste(ticks, units, sep = " ")
+klines <- trades_to_OHLC(pair = pair,
+               interval = intervals,
+               from_date = "2020-01-01",
+               date_subset = T)
 
-volumes <- frame1[, .(volume_freq = sum(volume)),
-                  by = .(Date, interval, buy_sell)]
-
-volumes_ratio <- volumes[, .(ratio_volume =  volume_freq[buy_sell  =="b"] / sum(volume_freq) ),
-                  by = .(Date, interval)]
-
-# Create candle stick dataset
-candles <- frame1[, .(high = max(price), low = min(price), open = first(price),
-                       close = last(price), volume = sum(volume)),
-                  by = .(Date, interval)]
-candles <- merge(candles, volumes_ratio, by = c("Date", "interval"))
-
-dim(candles)
-
-# Plot asset and select how many intervals 
-par(mfrow=c(1,1))
-plot_candlesticks(dta = candles, Ns = nrow(candles), asset = pair)
-SR_lines(data = candles, roll = nrow(candles), n_sort = 100, pair = pair, Ns = nrow(candles))
-abline(h = candles$close[nrow(candles)], lty = "dashed", col = "blue")
-
-p1 <- ggplot(data= candles, aes(x=1:nrow(candles), y=close)) +
-  geom_line(alpha = 0.5);p1
-
-# Remove and clean
-rm(frame)
-rm(frame1)
-gc()
+names(klines) <- gsub(" ", "_", intervals)
+df <- klines[[1]]
+df$x <- 1:nrow(df)
+ggplot(data= df, aes(x=x, y=close)) +
+  geom_line(alpha = 0.5) 
 
