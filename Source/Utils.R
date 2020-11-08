@@ -1,5 +1,6 @@
 # Packages --------------------------------------------------------------------
-
+# install_github("daroczig/binancer")
+# https://github.com/daroczig/binancer/
 suppressMessages(library(xts))
 suppressMessages(library(Rbitcoin))
 suppressMessages(library(httr))
@@ -20,8 +21,22 @@ suppressMessages(library(gganimate))
 suppressMessages(library(gapminder))
 suppressMessages(library(gifski))
 suppressMessages(library(gridExtra))
-# Functions --------------------------------------------------------------------
+suppressMessages(library(R.utils))
+suppressMessages(library(plotly))
 
+# Options
+setDTthreads(1)
+options(stringsAsFactors = FALSE)
+
+# API info
+api_info <- read.table(paste("/media/chris/DATA/Documents/Bot_Trading",
+                             "API_Keys.txt",
+                             sep = "/"),
+                       sep = ";", header = T)
+API_Key <- as.character(api_info$API_Key)
+API_Sign <- as.character(api_info$API_Sign)
+
+# Functions --------------------------------------------------------------------
 
 # Plot candlestick data --------------------------------------------------------
 plot_candlesticks <- function(dta, Ns, asset){
@@ -101,6 +116,7 @@ trades_to_OHLC <- function(pair, interval, from_date, date_subset) {
   
   # Fix column names and types
   frame[, Date_POSIXct := anytime(as.numeric(as.character(V3)))]
+  # , tz ="Europe/Zurich")
   frame[, Time := strftime(Date_POSIXct, format = "%H:%M:%S")]
   colnames(frame) <- c("price", "volume", "epoch_time", "buy_sell", "market_limit",
                        "miscellaneous", "last_id", "Date_POSIXct", "Time")
@@ -119,11 +135,16 @@ trades_to_OHLC <- function(pair, interval, from_date, date_subset) {
   for (i in 1:length(intervals)){ 
     # Select interval
     copied <- copy(frame1)
-    copied[, interval := strftime(ceiling_date(as.POSIXct(Date_POSIXct), intervals[i]) , format = '%H:%M:%S')]
+    copied[, interval := strftime(floor_date(as.POSIXct(Date_POSIXct), intervals[i]),
+                                  format = '%Y-%m-%d %H:%M:%S')]
     
     candles[[i]] <- copied[, .(high = max(price), low = min(price), open = first(price),
                                close = last(price), volume = sum(volume)),
-                           by = .(Date, interval)]
+                           by = .(interval)]
+    candles[[i]]$full_date_time <- as.POSIXct(paste(candles[[i]]$Date,
+                                                    candles[[i]]$interval),
+                                              format="%Y-%m-%d %H:%M:%S")
+    
     print(paste0("Reduced to ", intervals[i], " intervals.." ))
   }
   return(candles)

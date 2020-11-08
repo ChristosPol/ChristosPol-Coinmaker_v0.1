@@ -4,19 +4,32 @@
 ticks <- c(5, 60, 2, 4, 6, 12, 24)
 units <- c(rep("minutes", 2), rep("hours", 5))
 
+# Or choose a single one
 ticks <- c(60)
 units <- c(rep("minutes", 1))
 
-
 intervals <- paste(ticks, units, sep = " ")
+
+# Load trades and conver to OHLC, applies filtering
 klines <- trades_to_OHLC(pair = pair,
                interval = intervals,
-               from_date = "2020-01-01",
+               from_date = "2020-10-01",
                date_subset = T)
 
 names(klines) <- gsub(" ", "_", intervals)
+
+# Get a first visual
 df <- klines[[1]]
-df$x <- 1:nrow(df)
-ggplot(data= df, aes(x=x, y=close)) +
-  geom_line(alpha = 0.5) 
+View(df)
+fig <- df %>% plot_ly(x = ~full_date_time , type="candlestick",
+                      open = ~open, close = ~close,
+                      high = ~high, low = ~low) 
+fig <- fig %>% layout(title = pair,
+                      xaxis = list(rangeslider = list(visible = F)))
+
+
+fig
+# df$x <- 1:nrow(df)
+# ggplot(data= df, aes(x=x, y=close)) +
+#   geom_line(alpha = 0.5) 
 
