@@ -2,41 +2,25 @@
 paraller_exec <- FALSE
 
 # Badget 
-initial_budget <- 500
+initial_budget <- 200
 
 # select period of data 
 candles_recent <- as.data.table(klines[[1]])
 # 
 # training data here is not the traditional training set, but more of a 
 # placeholder initial dataset to calculate the indicators
-train_n <- ceiling(nrow(candles_recent) / 1.2)
+train_n <- ceiling(nrow(candles_recent) / 8)
 train_data <- candles_recent[1:train_n, ]
 test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 
 # myresult <- splines_fast_slow(spar_fast=0.5, spar_slow= 0.9, plot.it = T)
-myresult <- splines_fast_slow_cross(spar_slow = 0.7,
-                                    spar_fast = 0.4,
-                                    takeprofit = 0.05,
-                                    stoploss_ult = 0.02,
+myresult <- splines_fast_slow_cross(spar_slow = 0.8,
+                                    spar_fast = 0.7,
+                                    takeprofit = 0.03,
+                                    stoploss_ult = 0.01,
                                     plot.it = F)
-# myresult <- Pure_RSI_Volume_Trailing(RSI_Period=10, RSI_below=30, EMA_volume=10,
-#                                      takeprofit=0.025, stoploss_trail=0.025,stoploss_ult=0.025,
-#                                      times_vol=0, plot.it=F)
 
 calculate_profits(myresult)
-
-myresult <- RSI_splines(RSI_Period = 10,
-                                     RSI_lower = 40,
-                                     RSI_upper= 75,
-                                     EMA_volume = 10,
-                                     times_vol= 1,
-                                     spar = 0.3,
-                                     plot.it = T,
-                                     takeprofit = 0.05,
-                                     stoploss_trail= 0.02,
-                                     stoploss_ult= 0.02)
-calculate_profits(myresult)
-
 
 # Close last position
 if(myresult$action[nrow(myresult)] == "keep") {

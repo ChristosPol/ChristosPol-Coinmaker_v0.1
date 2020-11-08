@@ -185,7 +185,10 @@ calculate_profits_LS <- function(dataset, params){
                      enter_date = unique(calcu$Date)[1], exit_date = tail(unique(calcu$Date), 1))
   } else {
     
-    dd <- data.frame(profit = 0, n_trades = 0, enter_date = as.Date("2020-04-07"), exit_date =as.Date("2020-04-07"))
+    dd <- data.frame(profit = 0,
+                     n_trades = 0,
+                     enter_date = as.Date("2020-04-07"),
+                     exit_date =as.Date("2020-04-07"))
   }
   
   if(paraller_exec ==TRUE){
@@ -223,24 +226,34 @@ calculate_profits <- function(dataset, params){
     }
   profit_sum <- sum(profit)
   
-  dd <- data.frame(profit = profit_sum, n_trades = length(unique(calcu$id)), biggest_lost =min(profit[profit < 0]),
-                   biggest_win = max(profit[profit > 0 ]),avg_loss = mean(profit[profit < 0]),
-                   avg_win = mean(profit[profit > 0]), winratio = win_ratio(myresult),
-                   enter_date = unique(calcu$Date)[1], exit_date = tail(unique(calcu$Date), 1))
+  dd <- data.frame(profit = profit_sum,
+                   n_trades = length(unique(calcu$id)),
+                   biggest_lost =min(profit[profit < 0]),
+                   biggest_win = max(profit[profit > 0 ]),
+                   avg_loss = mean(profit[profit < 0]),
+                   avg_win = mean(profit[profit > 0]),
+                   winratio = win_ratio(myresult),
+                   enter_date = unique(calcu$full_date_time)[1],
+                   exit_date = tail(unique(calcu$full_date_time), 1))
   } else {
     
-    dd <- data.frame(profit = 0, n_trades = 0,biggest_lost = 0,
-                     biggest_win = 0, avg_loss = 0,
-                     avg_win = 0, winratio = 0,
-                     enter_date = as.Date("2020-04-07"), exit_date =as.Date("2020-04-07"))
+    dd <- data.frame(profit = 0,
+                     n_trades = 0,
+                     biggest_lost = 0,
+                     biggest_win = 0,
+                     avg_loss = 0,
+                     avg_win = 0,
+                     winratio = 0,
+                     enter_date = as.Date("2020-04-07"),
+                     exit_date =as.Date("2020-04-07"))
   }
   
-  # if(paraller_exec ==TRUE){
-  #   dd$params <- params
-  # }
-  # 
-  # write.table(dd, "/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv",
-  #             sep = ",", row.names = FALSE, col.names = !file.exists("/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv"), append = T)  
+  if(paraller_exec ==TRUE){
+    dd$params <- params
+  }
+
+  write.table(dd, "/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv",
+              sep = ",", row.names = FALSE, col.names = !file.exists("/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv"), append = T)
   return(dd)
 }
 

@@ -8,16 +8,16 @@ initial_budget <- 200
 # testing parameters
 spar_fast <- data.frame(spar_fast = seq(0.1, 0.9, 0.1), flag = 1)
 spar_slow <- data.frame(spar_slow = seq(0.1, 1, 0.1), flag = 1)
-tp <- data.frame(tp = c(0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 1000), flag = 1)
-sl <- data.frame(sl = c(0.005, 0.01, 0.015, 0.02, 0.025, 0.03, 1000), flag = 1)
+tp <- data.frame(tp = c(0.01, 0.02, 0.03, 1000), flag = 1)
+sl <- data.frame(sl = c(0.01, 0.02,  0.03, 1000), flag = 1)
 
 testing_params <- left_join(spar_fast, spar_slow) %>% left_join(tp)%>% left_join(sl)
 
 testing_params <- subset(testing_params, testing_params$spar_slow > testing_params$spar_fast)
 testing_params$flag <- NULL
 testing_params <- as.data.table(testing_params)
-i  <- 391
-testing_params <- testing_params[390:395,]
+
+# testing_params <- testing_params[1:25,]
 all_results <- list()
 start_time <- Sys.time()
 for (i in 1:length(klines)){
@@ -27,18 +27,17 @@ for (i in 1:length(klines)){
   # select period of data 
   candles_recent <- klines[[i]]
   
-  
   # Intitial data frame
-  train_n <- ceiling(nrow(candles_recent) / 1.2)
+  train_n <- ceiling(nrow(candles_recent) / 8)
   train_data <- candles_recent[1:train_n, ]
   
   # Test, same 
   test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
   
-  cl <- parallel::makeForkCluster(3)
+  cl <- parallel::makeForkCluster(2)
   doParallel::registerDoParallel(cl)
   start_time <- Sys.time()
-  results <- foreach(i = 1:nrow(testing_params), .combine = 'rbind') %dopar% {
+  results <- foreach(i = 1:nrow(testing_params),.verbose =T , .combine = 'rbind') %dopar% {
     myresult <- splines_fast_slow_cross(takeprofit = testing_params$tp[i],
                                         stoploss_ult = testing_params$sl[i],
                                         spar_fast = testing_params$spar_fast[i],
@@ -61,12 +60,12 @@ for (i in 1:length(klines)){
   all_results[[i]] <- results 
 }
 end_time <- Sys.time()
-print(start_time-end_time)
+print(end_time - start_time)
 
-filelist <- mapply(cbind, all_results, "Interval"=names(klines), SIMPLIFY=F)
+filelist <- mapply(cbind, all_results, "Interval" = names(klines), SIMPLIFY = F)
 final <- do.call(rbind, filelist)
 final$pair <- pair
-
+View(final)
 
 saveRDS(final, file ="/media/chris/DATA/Documents/Bot_Trading/Backtesting_results/latest_tp_sl_fast_slow_splines_cross_60min_201906_ETHEUR.rds")
 View(final)
