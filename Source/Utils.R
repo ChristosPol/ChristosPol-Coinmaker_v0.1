@@ -111,30 +111,22 @@ win_ratio <- function(dataset){
 # Convert historical dates to candlesticks
 trades_to_OHLC <- function(pair, interval, from_date, date_subset) {
   # Read it
-  file <- paste0(paste(pair_data_results, pair, sep = "/"), ".csv")
+  file <- paste0(paste(pair_data_results, pair, sep = "/"), ".csv.gz")
   frame <- fread(file)
   
-  # Fix column names and types
-  frame[, Date_POSIXct := anytime(as.numeric(as.character(V3)))]
-  # , tz ="Europe/Zurich")
-  frame[, Time := strftime(Date_POSIXct, format = "%H:%M:%S")]
   colnames(frame) <- c("price", "volume", "epoch_time", "buy_sell", "market_limit",
-                       "miscellaneous", "last_id", "Date_POSIXct", "Time")
-  frame[, Date := as.Date(Date_POSIXct)]
-  frame[, Hour := substr(frame$Time, 1,5)]
-  frame[, miscellaneous := NULL]
-  frame1 <- unique(frame)
+                        "last_id", "Date_POSIXct", "Time", "Date", "Hour")
   
   print("File loaded..")
   # Subset the time period
   if(date_subset) {
-    frame1 <- subset(frame1, frame1$Date >= from_date)
+    frame <- subset(frame, frame$Date >= from_date)
   }
   
   candles <- list()
   for (i in 1:length(intervals)){ 
     # Select interval
-    copied <- copy(frame1)
+    copied <- copy(frame)
     copied[, interval := strftime(floor_date(as.POSIXct(Date_POSIXct), intervals[i]),
                                   format = '%Y-%m-%d %H:%M:%S')]
     
@@ -217,16 +209,16 @@ calculate_profits <- function(dataset, params){
   if (nrow(calcu) > 0) {
   
   profit <- c()
-  profit_sum <- c()
+  
   ids <- unique(calcu$id)
   for(i in 1:length(ids)){
-    
-    profit[i] <-   calcu$Price[calcu$action =="sell" & calcu$id == ids[i]] - calcu$Price[calcu$action =="buy" & calcu$id == ids[i]] 
+
+    profit[i] <-   calcu$Price[calcu$action =="sell" & calcu$id == ids[i]] - calcu$Price[calcu$action =="buy" & calcu$id == ids[i]]
+
+  }
   
-    }
-  profit_sum <- sum(profit)
-  
-  dd <- data.frame(profit = profit_sum,
+  profit1 <- tail(calcu$Price, 1)
+  dd <- data.frame(profit = profit1-initial_budget,
                    n_trades = length(unique(calcu$id)),
                    biggest_lost =min(profit[profit < 0]),
                    biggest_win = max(profit[profit > 0 ]),
@@ -252,8 +244,8 @@ calculate_profits <- function(dataset, params){
     dd$params <- params
   }
 
-  write.table(dd, "/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv",
-              sep = ",", row.names = FALSE, col.names = !file.exists("/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv"), append = T)
+  # write.table(dd, "/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv",
+  #             sep = ",", row.names = FALSE, col.names = !file.exists("/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv"), append = T)
   return(dd)
 }
 

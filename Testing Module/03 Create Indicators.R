@@ -9,17 +9,37 @@ candles_recent <- as.data.table(klines[[1]])
 # 
 # training data here is not the traditional training set, but more of a 
 # placeholder initial dataset to calculate the indicators
-train_n <- ceiling(nrow(candles_recent) / 8)
+train_n <- ceiling(nrow(candles_recent) / 4)
+
 train_data <- candles_recent[1:train_n, ]
 test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 
+
+myresult <- splines_fast_slow_cross_eff(spar_fast = 0.5, spar_slow = 0.6)
+df <- myresult
+df$returns <- c(lag(diff(df$close)), 0)
+df$actions <- ifelse(df$EMA_fast > df$EMA_slow, 1, 0)
+df$position <- lag(df$action)
+df$profits <- df$returns * df$position
+prof<- sum(df$profits[df$position == 1], na.rm = T)
 # myresult <- splines_fast_slow(spar_fast=0.5, spar_slow= 0.9, plot.it = T)
-myresult <- splines_fast_slow_cross(spar_slow = 0.8,
-                                    spar_fast = 0.7,
-                                    takeprofit = 0.03,
-                                    stoploss_ult = 0.01,
+myresult <- splines_fast_slow_cross(spar_slow = 0.6,
+                                    spar_fast = 0.5,
+                                    takeprofit = 1000,
+                                    stoploss_ult = 1000,
                                     plot.it = F)
 
+
+myresult <- RSI_splines(RSI_Period = 10,
+                        RSI_lower = 25,
+                        RSI_upper = 70,
+                        spar = 0.6 ,
+                        stoploss_ult = 0.02,
+                        plot.it = F)
+
+cross_EMA_stoploss(fast_EMA = 50, slow_EMA = 300, takeprofit = 0.05, stoploss_trail=0.03,
+                   stoploss_ult=0.03, plot.it = F)
+  
 calculate_profits(myresult)
 
 # Close last position
@@ -33,14 +53,18 @@ myresult$x <- 1:nrow(myresult)
 segment_buy <- myresult[action %in%c("buy"), ]
 segment_sell <- myresult[action %in%c("sell"), ]
 
-p1 <- ggplot(data= myresult, aes(x=x, y=close)) +
+p1 <- ggplot(data= myresult, aes(x=full_date_time, y=close)) +
   geom_line(alpha = 0.5) +
-  #geom_line(aes(x = x, y = spline_fast), color ="red")+
-  #geom_line(aes(x = x, y = spline_slow), color ="green")+
-  geom_point(data = segment_buy, aes(x=x, y=close),
-             color ="green", size = 1) +
-  geom_point(data = segment_sell, aes(x=x, y=close),
-             color ="red", size = 1);p1 
+  geom_line(aes(x = full_date_time, y = spline_fast), color ="red")+
+  geom_line(aes(x = full_date_time, y = spline_slow), color ="green")+
+  geom_point(data = segment_buy, aes(x=full_date_time, y=close),
+             color ="green", size = 2) +
+  geom_point(data = segment_sell, aes(x=full_date_time, y=close),
+             color ="red", size = 2)
+  # geom_line(aes(x=full_date_time, y=Mean), color ="green", size = 0.2)+
+  # geom_line(aes(x=full_date_time, y=Upper), color ="red", size = 0.2)+
+  # geom_line(aes(x=full_date_time, y=Lower), color ="red", size = 0.2);p1
+
 
 df_red <- myresult[0:2500,] 
 segment_buy <- df_red[action %in%c("buy"), ]

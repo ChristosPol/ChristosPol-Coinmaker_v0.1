@@ -28,8 +28,8 @@ EUR_pairs <- EUR_pairs[!EUR_pairs %in% to_remove]
 
 # Dynamic support and resistance
 # Get OHLC data and determine trends
-spar <- 0.90
-rsi_period <- 14
+spar_slow <- 1
+spar_fast <- 0.7
 i <- 2
 par(mfrow =c(2,2))
 par(bg = 'grey')
@@ -40,31 +40,34 @@ for (i in 1:length(EUR_pairs)){
   df <- simple_OHLC(interval = 60, pair = EUR_pairs[i])
   
   df$sharpe <- mean(diff(df$close)) / sd(df$close)
-  df$rsi <- RSI(df$close, n = rsi_period)
+  
   df$x <- 1:nrow(df)
   # Calculate spline - derivative
-  smoothingSpline = smooth.spline(df[, close] ~ as.numeric(rownames(df)) , spar = spar)
-  df[, spline := predict(smoothingSpline)$y]
-  df[, deriv := predict(smoothingSpline, deriv = 1)$y]
+  smoothingSpline = smooth.spline(df[, close] ~ as.numeric(rownames(df)) , spar = spar_fast)
+  df[, spline_fast := predict(smoothingSpline)$y]
+  # df[, deriv := predict(smoothingSpline, deriv = 1)$y]
+  smoothingSpline = smooth.spline(df[, close] ~ as.numeric(rownames(df)) , spar = spar_slow)
+  df[, spline_slow := predict(smoothingSpline)$y]
   
   p1 <- ggplot(data= df, aes(x=x, y=close)) +
     geom_line(alpha = 0.7) +
-    geom_line(aes(x = x, y = spline), color ="red") +
+    geom_line(aes(x = x, y = spline_fast), color ="red") +
+    geom_line(aes(x = x, y = spline_slow), color ="blue") +
     ggtitle(label =paste0("Sharpe = ", round(tail(df$sharpe, 1), 3), " pair = ",EUR_pairs[i]  ))
-  
-  p2 <- ggplot(data = df, aes(x=x, y = deriv)) +
-    geom_line(color ="red", size = 0.7)+ geom_hline(yintercept=0, size =0.2)
-  
-  p3 <- ggplot(data = df, aes(x=x, y = rsi)) +
-    geom_line(alpha = 0.7)+ 
-    geom_hline(yintercept=70, size =0.2)+ 
-    geom_hline(yintercept=30, size =0.2)
-  
-  p4 <- ggplot(data = df, aes(x=x, y = volume)) +
-    geom_line(alpha = 0.7)
-  
-  
-  grid.arrange(p1, p2, p3, p4, nrow =2)
+  p1
+  # p2 <- ggplot(data = df, aes(x=x, y = deriv)) +
+  #   geom_line(color ="red", size = 0.7)+ geom_hline(yintercept=0, size =0.2)
+  # 
+  # p3 <- ggplot(data = df, aes(x=x, y = rsi)) +
+  #   geom_line(alpha = 0.7)+ 
+  #   geom_hline(yintercept=70, size =0.2)+ 
+  #   geom_hline(yintercept=30, size =0.2)
+  # 
+  # p4 <- ggplot(data = df, aes(x=x, y = volume)) +
+  #   geom_line(alpha = 0.7)
+  # 
+  # 
+  # grid.arrange(p1, p2, p3, p4, nrow =2)
   
   # df$SMA_N <- SMA(df$close, n = 30)
   
@@ -86,7 +89,7 @@ for (i in 1:length(EUR_pairs)){
   })
   print(i/length(EUR_pairs))
   print(paste0("Sharpe Ratio for: ",  EUR_pairs[i]," ", round(unique(df$sharpe), 4))) 
-  Sys.sleep(2)
+  Sys.sleep(10)
   
 }
 

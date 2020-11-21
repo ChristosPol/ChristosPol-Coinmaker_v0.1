@@ -8,8 +8,8 @@ initial_budget <- 200
 # testing parameters
 spar_fast <- data.frame(spar_fast = seq(0.1, 0.9, 0.1), flag = 1)
 spar_slow <- data.frame(spar_slow = seq(0.1, 1, 0.1), flag = 1)
-tp <- data.frame(tp = c(0.01, 0.02, 0.03, 1000), flag = 1)
-sl <- data.frame(sl = c(0.01, 0.02,  0.03, 1000), flag = 1)
+tp <- data.frame(tp = c(1000), flag = 1)
+sl <- data.frame(sl = c(1000), flag = 1)
 
 testing_params <- left_join(spar_fast, spar_slow) %>% left_join(tp)%>% left_join(sl)
 
@@ -28,13 +28,13 @@ for (i in 1:length(klines)){
   candles_recent <- klines[[i]]
   
   # Intitial data frame
-  train_n <- ceiling(nrow(candles_recent) / 8)
+  train_n <- ceiling(nrow(candles_recent) / 4)
   train_data <- candles_recent[1:train_n, ]
   
   # Test, same 
   test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
   
-  cl <- parallel::makeForkCluster(2)
+  cl <- parallel::makeForkCluster(3)
   doParallel::registerDoParallel(cl)
   start_time <- Sys.time()
   results <- foreach(i = 1:nrow(testing_params),.verbose =T , .combine = 'rbind') %dopar% {

@@ -1,15 +1,54 @@
+splines_fast_slow_cross_eff <- function(spar_fast, spar_slow) {
+  
+  # Train and test datasets
+  train_data[, c("x",
+                 "spline_fast",
+                 "spline_slow",
+                 "action") := list(NA, NA, NA, NA) ]
+  
+  test_data[, c("x",
+                "spline_fast",
+                "spline_slow",
+                "action") := list(NA, NA, NA, NA) ]
+  
+  # Going intro the loop for test data -----------------------------------------
+  for (i in 1:nrow(test_data)){
+    
+    fut <- rbind(train_data, test_data[i, ])
+    fut$x <- 1:nrow(fut)
+    
+    # Spline calculation -------------------------------------------------------
+    # Calculate spline - derivative
+    smoothingSpline_fast = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar_fast)
+    fut[, spline_fast := predict(smoothingSpline_fast)$y]
+    
+    # Spline calculation -------------------------------------------------------
+    # Calculate spline - derivative
+    smoothingSpline_slow = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar_slow)
+    fut[, spline_slow := predict(smoothingSpline_slow)$y]
+    
+    # Deciding upon action -----------------------------------------------------
+    # Buy condition
+    
+    fut$action[nrow(fut)] <- ifelse(fut$spline_fast[nrow(fut)] > fut$spline_slow[nrow(fut)], 1, 0)
+    train_data <- fut
+    print(i)
+  }
+  return(train_data)
+}
+
 splines_fast_slow_cross <- function(spar_fast,spar_slow, takeprofit,stoploss_ult,plot.it) {
   
   # Train and test datasets
   train_data[, c("x",
                  "spline_fast",
-                 "deriv_fast",
-                 "sign_derivs_fast",
-                 "change_sign_fast",
+                 # "deriv_fast",
+                 # "sign_derivs_fast",
+                 # "change_sign_fast",
                  "spline_slow",
-                 "deriv_slow",
-                 "sign_derivs_slow",
-                 "change_sign_slow",
+                 # "deriv_slow",
+                 # "sign_derivs_slow",
+                 # "change_sign_slow",
                  "exit_condition",
                  "tp",
                  "ult_sl",
@@ -17,18 +56,17 @@ splines_fast_slow_cross <- function(spar_fast,spar_slow, takeprofit,stoploss_ult
                  "Units",
                  "Price",
                  "id") := list(NA, NA, NA, NA, NA, NA,
-                               NA, NA, NA, NA, NA, NA,
                                NA, NA, NA, NA) ]
   
   test_data[, c("x",
                 "spline_fast",
-                "deriv_fast",
-                "sign_derivs_fast",
-                "change_sign_fast",
+                # "deriv_fast",
+                # "sign_derivs_fast",
+                # "change_sign_fast",
                 "spline_slow",
-                "deriv_slow",
-                "sign_derivs_slow",
-                "change_sign_slow",
+                # "deriv_slow",
+                # "sign_derivs_slow",
+                # "change_sign_slow",
                 "exit_condition",
                 "tp",
                 "ult_sl",
@@ -36,7 +74,6 @@ splines_fast_slow_cross <- function(spar_fast,spar_slow, takeprofit,stoploss_ult
                 "Units",
                 "Price",
                 "id") := list(NA, NA, NA, NA, NA, NA,
-                              NA, NA, NA, NA, NA, NA,
                               NA, NA, NA, NA) ]
   
   # Going intro the loop for test data -----------------------------------------
@@ -49,21 +86,21 @@ splines_fast_slow_cross <- function(spar_fast,spar_slow, takeprofit,stoploss_ult
     # Calculate spline - derivative
     smoothingSpline_fast = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar_fast)
     fut[, spline_fast := predict(smoothingSpline_fast)$y]
-    fut[, deriv_fast := predict(smoothingSpline_fast, deriv = 1)$y]
+    # fut[, deriv_fast := predict(smoothingSpline_fast, deriv = 1)$y]
     
     # Sign of deriv - [-2 for desc, 2 for asc] 
-    fut[, sign_derivs_fast := c(sign(deriv_fast))]
-    fut[, change_sign_fast := c(0, diff(sign(deriv_fast)))]
+    # fut[, sign_derivs_fast := c(sign(deriv_fast))]
+    # fut[, change_sign_fast := c(0, diff(sign(deriv_fast)))]
     
     # Spline calculation -------------------------------------------------------
     # Calculate spline - derivative
     smoothingSpline_slow = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar_slow)
     fut[, spline_slow := predict(smoothingSpline_slow)$y]
-    fut[, deriv_slow := predict(smoothingSpline_slow, deriv = 1)$y]
+    # fut[, deriv_slow := predict(smoothingSpline_slow, deriv = 1)$y]
     
     # Sign of deriv - [-2 for desc, 2 for asc] 
-    fut[, sign_derivs_slow := c(sign(deriv_slow))]
-    fut[, change_sign_slow := c(0, diff(sign(deriv_slow)))]
+    # fut[, sign_derivs_slow := c(sign(deriv_slow))]
+    # fut[, change_sign_slow := c(0, diff(sign(deriv_slow)))]
     if(plot.it == TRUE){
       
       plot_df <- tail(fut, 200)
@@ -82,15 +119,6 @@ splines_fast_slow_cross <- function(spar_fast,spar_slow, takeprofit,stoploss_ult
       
       points(rownames(plot_df)[plot_df$x %in% df_points_buy$x], df_points_buy$y, col ="green", pch = 19)
       points(rownames(plot_df)[plot_df$x %in% df_points_sell$x], df_points_sell$y, col ="red", pch = 19)
-      # abline(h = sr$SL)
-      # abline(h =sr$RL)
-      # plot(plot_df$deriv_slow, type ="l", main = paste0("sign: ",
-      #                                                   " sign deriv: ", plot_df$sign_derivs_slow[nrow(plot_df)], " deriv ", plot_df$deriv_slow[nrow(plot_df)]))
-      # abline(h = 0, col = "red", lty = 5, lwd = 2)
-      # 
-      # plot(plot_df$deriv_fast, type ="l", main = paste0("sign: ",
-      #                                                   " sign deriv: ", plot_df$sign_derivs_fast[nrow(plot_df)], " deriv ", plot_df$deriv_fast[nrow(plot_df)]))
-      # abline(h = 0, col = "red", lty = 5, lwd = 2)
     }
     
     # Exit condition for takeprofit  - Fixed
@@ -119,6 +147,7 @@ splines_fast_slow_cross <- function(spar_fast,spar_slow, takeprofit,stoploss_ult
       fut$action[nrow(fut)] <- "buy"
       fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
       fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)] - (0.0026 * fut$Units[nrow(fut)] * fut$close[nrow(fut)])
+      # fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)]
       fut$id[nrow(fut)] <- round(runif(1, 10000, 5000000))
       
       # Sell condition
@@ -128,6 +157,7 @@ splines_fast_slow_cross <- function(spar_fast,spar_slow, takeprofit,stoploss_ult
       fut$action[nrow(fut)] <- "sell"
       fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1]
       fut$Price[nrow(fut)] <- fut$close[nrow(fut)]* fut$Units[nrow(fut)]  - (0.0026 * fut$Units[nrow(fut)] * fut$close[nrow(fut)])
+      # fut$Price[nrow(fut)] <- fut$close[nrow(fut)]* fut$Units[nrow(fut)]
       fut$id[nrow(fut)] <- fut$id[nrow(fut)-1]
       initial_budget <- fut$Price[nrow(fut)]
       
@@ -151,7 +181,7 @@ splines_fast_slow_cross <- function(spar_fast,spar_slow, takeprofit,stoploss_ult
       Sys.sleep(0.1)
       # flush.console()
     }
-    # print(i)
+    print(i)
   }
   return(train_data)
 }
@@ -3298,53 +3328,34 @@ Pure_RSI_Volume_Trailing_Dynamic_SRL <- function(RSI_Period, RSI_below, EMA_volu
 
 
 # Strategy using volumes spikes and RSI oversold conditions
-RSI_splines <- function (RSI_Period,
-                         RSI_lower, 
-                         RSI_upper,
-                         EMA_volume,
-                         times_vol,
-                         spar,
-                         takeprofit,
-                         stoploss_trail,
-                         stoploss_ult,
-                         plot.it){
+RSI_splines <- function (RSI_Period,RSI_lower,RSI_upper,spar,stoploss_ult,plot.it){
   
   # Train and test datasets
   train_data[, c("x",
                  "RSI",
-                 "EMA_volume",
                  "spline",
                  "deriv",
                  "exit_condition",
-                 "signal_volume",
                  "signal_RSI",
-                 "candle_type",
                  "action",
                  "Units",
                  "Price",
-                 "tp",
                  "ult_sl",
-                 "trail_sl",
                  "id") := list(NA, NA, NA, NA, NA, NA, NA,
-                               NA, NA, NA, NA, NA, NA, NA, NA, NA) ]
+                               NA, NA, NA, NA) ]
   
   test_data[, c("x",
                 "RSI",
-                "EMA_volume",
                 "spline",
                 "deriv",
                 "exit_condition",
-                "signal_volume",
                 "signal_RSI",
-                "candle_type",
                 "action",
                 "Units",
                 "Price",
-                "tp",
                 "ult_sl",
-                "trail_sl",
                 "id") := list(NA, NA, NA, NA, NA, NA, NA,
-                              NA, NA, NA, NA, NA, NA, NA, NA, NA)  ]
+                              NA, NA, NA, NA)  ]
   
   # Going intro the loop for test data -----------------------------------------
   for (i in 1:nrow(test_data)){
@@ -3353,26 +3364,24 @@ RSI_splines <- function (RSI_Period,
     
     # RSI and Volume
     fut$RSI <- RSI(fut$close, n = RSI_Period)
-    fut$EMA_volume <- EMA(fut$volume, n = EMA_volume)
     fut$x <- 1:nrow(fut)
-    
-    # Volume Crossing of volume over the SMA(volume, n_periods)
-    fut$signal_volume[nrow(fut)] <- ifelse(fut$volume[nrow(fut)] > fut$EMA_volume[nrow(fut)] * times_vol ,
-                                           "volume_higher", "volume_lower")
+  
     # RSI Crossing of upper or lower bounds
-    fut$signal_RSI[nrow(fut)] <- ifelse(fut$RSI[nrow(fut)] < RSI_upper &  fut$RSI[nrow(fut)] > RSI_lower,
-                                        "RSI_between", "RSI_not_between")
     
+    if(fut$RSI[nrow(fut)] < RSI_upper &  fut$RSI[nrow(fut)] > RSI_lower){
+      
+      fut$signal_RSI[nrow(fut)] <-"RSI_between"
+    } else if (fut$RSI[nrow(fut)] < RSI_lower){
+      fut$signal_RSI[nrow(fut)] <-"RSI_lower"
+    } else { 
+      fut$signal_RSI[nrow(fut)] <-"RSI_above"
+    }
     # Calculate spline - derivative
     smoothingSpline = smooth.spline(fut[, close] ~ as.numeric(rownames(fut)) , spar = spar)
     fut[, spline := predict(smoothingSpline)$y]
     fut[, deriv := predict(smoothingSpline, deriv = 1)$y]
     
-    # Candle type
-    fut$candle_type[fut$open > fut$close] <- "bearish"
-    fut$candle_type[fut$open < fut$close] <- "bullish"
-    fut$candle_type[fut$open == fut$close] <- "neutral"    
-    
+
     if(plot.it == TRUE){
       
       plot_df <- tail(fut, 200)
@@ -3381,7 +3390,7 @@ RSI_splines <- function (RSI_Period,
       df_points_sell <- data.frame(x = na.omit(plot_df$x[plot_df$action =="sell"]),
                                    y = na.omit(plot_df$close[plot_df$action == "sell"]))
       
-      par(mfrow = c(2, 2))
+      par(mfrow = c(3, 1))
       plot(plot_df$close, type ="l", main = paste0("profits = ", tail(na.omit(plot_df$Price), 1)))
       lines(plot_df$spline, col ="red")
       points(rownames(plot_df)[plot_df$x %in% df_points_buy$x], df_points_buy$y, col ="green", pch = 19)
@@ -3394,19 +3403,9 @@ RSI_splines <- function (RSI_Period,
       
       plot(plot_df$deriv, type ="l")
       abline(h = 0, lty = 5, lwd = 2)
-      
-      plot(plot_df$volume, type ="l")
-      # lines(plot_df$EMA_volume,  col = "red", lty = 5, lwd = 2)
-      abline(h = plot_df$EMA_volume[nrow(plot_df)],  col = "red", lty = 5, lwd = 2)
-    }
+      }
     
     
-    # Exit condition for takeprofit  - Fixed
-    tp <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) + takeprofit * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
-    
-    if (length(tp) == 0) {
-      tp <- 0
-    }
     
     # Ultimate stop loss
     ult_sl <- tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1) - stoploss_ult * tail(fut$close[fut$action == "buy"][!is.na(fut$close[fut$action == "buy"])], 1)
@@ -3416,45 +3415,19 @@ RSI_splines <- function (RSI_Period,
     }
     
     
-    # Trailing stop loss
-    if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] > fut$close[nrow(fut)-1] )  ){
-      
-      trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
-      if( trail_sl < tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)){
-        trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
-        
-      } else {
-        trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
-      }
-      
-    } else if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] <= fut$close[nrow(fut)-1] ) ){
-      trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
-      
-    } else {
-      trail_sl <-0
-    }
-    
-    if(length(trail_sl) == 0 ){
-      
-      trail_sl <- 0
-    }
-    
-    fut$tp[nrow(fut)] <- tp
     fut$ult_sl[nrow(fut)] <- ult_sl
-    fut$trail_sl[nrow(fut)] <- trail_sl
+
     
-    
-    fut$exit_condition[nrow(fut)] <- fut$trail_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$ult_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$tp[nrow(fut)] < fut$close[nrow(fut)]
+    fut$exit_condition[nrow(fut)] <-  fut$ult_sl[nrow(fut)] > fut$close[nrow(fut)] 
     
     
     # Deciding upon action -----------------------------------------------------
     
     # Buy condition
     if ( (is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("sell", "no action")) &
-         fut$signal_volume[nrow(fut)] == "volume_higher" &  fut$signal_RSI[nrow(fut)] == "RSI_between" &
-         fut$candle_type[nrow(fut)] == "bullish"  &  fut$deriv[nrow(fut)] > 0 
+         fut$signal_RSI[nrow(fut)] == "RSI_lower" & fut$deriv[nrow(fut)] > 0 
     ) {
-      # fut$RSI[nrow(fut)-1] < RSI_lower
+      
       fut$action[nrow(fut)] <- "buy"
       fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
       fut$Price[nrow(fut)] <- fut$Units[nrow(fut)] * fut$close[nrow(fut)] - (0.0026 * fut$Units[nrow(fut)] * fut$close[nrow(fut)])
@@ -3472,7 +3445,7 @@ RSI_splines <- function (RSI_Period,
       
       # Keep condition
     } else if ( fut$action[nrow(fut) - 1] %in% c("buy", "keep")   & 
-                (fut$exit_condition[nrow(fut)] == FALSE | fut$deriv[nrow(fut)] > 0)  ) {
+                (fut$exit_condition[nrow(fut)] == FALSE)  ) {
       
       fut$action[nrow(fut)] <- "keep"
       fut$Units[nrow(fut)] <- fut$Units[nrow(fut) -1 ]

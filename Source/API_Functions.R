@@ -125,13 +125,26 @@ hist_trades_pair <- function(sleep, hist_id, pair){
     if(is.null(dat$result[1])) next # error, skip
     if(nrow(as.data.frame(dat$result[1])) == 0) break # last batch empty
     temp <- cbind(data.frame(dat$result[1]), dat$result$last)
+    
+    # Fix column names and types
+    temp$Date_POSIXct <- as.character(anytime(as.numeric(as.character(temp[,3]))))
+    temp$Time <- strftime(temp$Date_POSIXct, format = "%H:%M:%S")
+    colnames(temp) <- c("price", "volume", "epoch_time", "buy_sell", "market_limit",
+                         "miscellaneous", "last_id", "Date_POSIXct", "Time")
+    temp$Date <- as.Date(temp$Date_POSIXct)
+    temp$Hour <- substr(temp$Time, 1,5)
+    temp$miscellaneous <- NULL
+    
     hist_id <- dat$result$last
-    file <- paste0(paste(pair_data_results, pair, sep = "/"), ".csv")
-    write.table(temp, file, sep = ",", row.names = FALSE,
+    file <- paste0(paste(pair_data_results, pair, sep = "/"), ".csv.gz")
+    fwrite(temp, file, sep = ",", row.names = FALSE,
                 col.names = FALSE,
                 append = TRUE)
-    print(Sys.time())
-    print(unique(as.character(temp$`dat$result$last`)))
+    print(paste0("Current time: " ,Sys.time()))
+    print(paste0("Period of 1000 trades received: ",
+                 head(as.character(temp$Date_POSIXct), 1),
+                 "-" ,
+                 tail(as.character(temp$Date_POSIXct), 1)))
   }
 }
 

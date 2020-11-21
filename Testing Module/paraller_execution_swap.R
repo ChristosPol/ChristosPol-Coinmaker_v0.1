@@ -5,23 +5,17 @@ library(doParallel)
 paraller_exec <-TRUE
 initial_budget <- 200
 
-# testing parameters
 
 RSI_Period <- data.frame(RSI_Period = c(5, 10, 15), flag = 1)
-RSI_lower <- data.frame(RSI_lower = c(20, 30, 40), flag = 1)
-RSI_upper <- data.frame(RSI_upper = c(60, 70, 80), flag = 1)
-EMA_volume <- data.frame(EMA_volume = c(10), flag = 1)
-times_vol <- data.frame(times_vol = c(1), flag = 1)
-spar <- data.frame(spar = c(0.6,0.7,0.8), flag = 1)
+RSI_lower <- data.frame(RSI_lower = c(20, 30, 40, 50), flag = 1)
+RSI_upper <- data.frame(RSI_upper = c(60, 70, 80, 90), flag = 1)
+spar <- data.frame(spar = c(0.5, 0.6, 0.7, 0.8, 0.9), flag = 1)
+stoploss_ult <- data.frame(stoploss_ult = c(0.01, 0.02), flag = 1)
 plot.it <- T
-takeprofit <- data.frame(takeprofit = c(0.01, 0.02,0.03), flag = 1)
-stoploss_trail <- data.frame(stoploss_trail = c(0.01, 0.02,0.03), flag = 1)
-stoploss_ult <- data.frame(stoploss_ult = c(0.01, 0.02,0.03), flag = 1)
 
 
-testing_params <- left_join(RSI_Period, RSI_lower) %>% left_join(RSI_upper)%>% left_join(EMA_volume)%>%
-  left_join(times_vol)%>% left_join(spar)%>% left_join(takeprofit)%>% left_join(stoploss_trail)%>%
-  left_join(stoploss_ult)
+testing_params <- left_join(RSI_Period, RSI_lower) %>% left_join(RSI_upper) %>%
+  left_join(spar) %>% left_join(stoploss_ult)
 
 testing_params$flag <- NULL
 testing_params <- as.data.table(testing_params)
@@ -35,7 +29,7 @@ for (i in 1:length(klines)){
   
   
   # Intitial data frame
-  train_n <- ceiling(nrow(candles_recent) / 1.3)
+  train_n <- ceiling(nrow(candles_recent) / 3)
   train_data <- candles_recent[1:train_n, ]
   
   # Test, same 
@@ -48,11 +42,7 @@ for (i in 1:length(klines)){
     myresult <- RSI_splines(RSI_Period = testing_params$RSI_Period[i],
                                          RSI_lower = testing_params$RSI_lower[i],
                                          RSI_upper = testing_params$RSI_upper[i],
-                                         EMA_volume = testing_params$EMA_volume[i],
-                                         times_vol = testing_params$times_vol[i],
                                          spar = testing_params$spar[i],
-                                         takeprofit = testing_params$takeprofit[i],
-                                         stoploss_trail = testing_params$stoploss_trail[i],
                                          stoploss_ult = testing_params$stoploss_ult[i],
                                         plot.it = FALSE)
     # Close last position
@@ -64,11 +54,7 @@ for (i in 1:length(klines)){
     params <- paste(RSI_Period = testing_params$RSI_Period[i],
                     RSI_lower = testing_params$RSI_lower[i],
                     RSI_upper = testing_params$RSI_upper[i],
-                    EMA_volume = testing_params$EMA_volume[i],
-                    times_vol = testing_params$times_vol[i],
                     spar = testing_params$spar[i],
-                    takeprofit = testing_params$takeprofit[i],
-                    stoploss_trail = testing_params$stoploss_trail[i],
                     stoploss_ult = testing_params$stoploss_ult[i],
                     sep ="_")
     res <- calculate_profits(myresult, params = params)
