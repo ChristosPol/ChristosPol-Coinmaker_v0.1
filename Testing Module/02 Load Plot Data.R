@@ -12,8 +12,8 @@ intervals <- paste(ticks, units, sep = " ")
 # Load trades and conver to OHLC, applies filtering
 klines <- trades_to_OHLC(pair = pair,
                interval = intervals,
-               from_date = "2020-06-01",
-               date_subset = F)
+               from_date = "2020-01-01",
+               date_subset = T)
 names(klines) <- gsub(" ", "_", intervals)
 
 # Get a first visual

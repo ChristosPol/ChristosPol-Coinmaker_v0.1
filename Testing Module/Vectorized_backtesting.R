@@ -3,7 +3,7 @@
 df <- klines[[1]]
 
 # Exhaustive search of best curves
-EMA_fast <- data.frame(EMA_fast = seq(5, 400, 5), flag = 1)
+EMA_fast <- data.frame(EMA_fast = seq(5, 300, 5), flag = 1)
 EMA_slow <- data.frame(EMA_slow = seq(10, 200, 5), flag = 1)
 testing_params <- left_join(EMA_fast, EMA_slow)
 testing_params <- subset(testing_params,
@@ -13,17 +13,18 @@ testing_params <- as.data.table(testing_params)
 
 ggplot(data= df, aes(x=full_date_time, y=close)) +
   geom_line(alpha = 0.5)
+leverage <- 1
 prof <- c()
 for (i in 1:nrow(testing_params)){
   
   df$EMA_fast <- EMA(df$close, n = testing_params$EMA_fast[i])
   df$EMA_slow <- EMA(df$close, n = testing_params$EMA_slow[i])
   df$returns <- c(lag(diff(df$close)), 0)
-  df$actions <- ifelse(df$EMA_fast > df$EMA_slow, 1, 0)
+  df$actions <- ifelse(df$EMA_fast > df$EMA_slow, leverage, 0)
   df$position <- lag(df$action)
   df$profits <- df$returns * df$position
   runs <- rle(df$actions)
-  longs <- which(runs$values ==1)
+  longs <- which(runs$values ==leverage)
   shorts <- which(runs$values == 0)
   cums <- cumsum(runs$lengths)
   starts <- cums[longs - 1] + 1
@@ -32,11 +33,11 @@ for (i in 1:nrow(testing_params)){
   df$signal[starts] <- 1
   df$signal[ends] <- 0
   
-  prof[i] <- sum(df$profits[df$position == 1], na.rm = T)
+  prof[i] <- sum(df$profits[df$position == leverage], na.rm = T)
   
 }
-i <-121
-
+i <-which.max(prof)
+max(prof)
 segment_buy <- df[signal  == 1, ]
 segment_sell <- df[signal == 0, ]
 
