@@ -3,8 +3,8 @@
 df <- klines[[1]]
 
 # Exhaustive search of best curves
-EMA_fast <- data.frame(EMA_fast = seq(5, 300, 5), flag = 1)
-EMA_slow <- data.frame(EMA_slow = seq(10, 200, 5), flag = 1)
+EMA_fast <- data.frame(EMA_fast = seq(5, 350, 5), flag = 1)
+EMA_slow <- data.frame(EMA_slow = seq(5, 500, 5), flag = 1)
 testing_params <- left_join(EMA_fast, EMA_slow)
 testing_params <- subset(testing_params,
                          testing_params$EMA_slow > testing_params$EMA_fast)

@@ -9,7 +9,7 @@ candles_recent <- as.data.table(klines[[1]])
 # 
 # training data here is not the traditional training set, but more of a 
 # placeholder initial dataset to calculate the indicators
-train_n <- ceiling(nrow(candles_recent) / 15)
+train_n <- ceiling(nrow(candles_recent) / 5)
 
 train_data <- candles_recent[1:train_n, ]
 test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]

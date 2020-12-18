@@ -25,7 +25,7 @@ suppressMessages(library(R.utils))
 suppressMessages(library(plotly))
 
 # Options
-setDTthreads(1)
+# setDTthreads(1)
 options(stringsAsFactors = FALSE)
 
 # API info
@@ -109,7 +109,7 @@ win_ratio <- function(dataset){
 }
 
 # Convert historical dates to candlesticks
-trades_to_OHLC <- function(pair, interval, from_date, date_subset) {
+trades_to_OHLC <- function(pair, interval, from_date, to_date, date_subset) {
   # Read it
   file <- paste0(paste(pair_data_results, pair, sep = "/"), ".csv.gz")
   frame <- fread(file)
@@ -120,7 +120,7 @@ trades_to_OHLC <- function(pair, interval, from_date, date_subset) {
   print("File loaded..")
   # Subset the time period
   if(date_subset) {
-    frame <- subset(frame, frame$Date >= from_date)
+    frame <- subset(frame, frame$Date >= from_date & frame$Date < to_date)
   }
   
   candles <- list()
@@ -244,8 +244,8 @@ calculate_profits <- function(dataset, params){
     dd$params <- params
   }
 
-  # write.table(dd, "/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv",
-  #             sep = ",", row.names = FALSE, col.names = !file.exists("/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv"), append = T)
+  write.table(dd, "/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv",
+              sep = ",", row.names = FALSE, col.names = !file.exists("/media/chris/DATA/Documents/Bot_Trading/Historical_data/myDF.csv"), append = T)
   return(dd)
 }
 

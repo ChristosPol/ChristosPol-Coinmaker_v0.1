@@ -2173,37 +2173,38 @@ invert_EMAs_volume <- function(fast_EMA, slow_EMA, RSI_period, RSI_below, Volume
 # Strategy 2 -------------------------------------------------------------------
 # Crossing fast ema to slower with stoploss condition
 
-cross_EMA_stoploss <- function(fast_EMA, slow_EMA, takeprofit, stoploss_trail,stoploss_ult, plot.it) {
+cross_EMA_stoploss <- function(EMA_fast, EMA_slow, EMA_volume, takeprofit, stoploss_ult, plot.it) {
   
   # Train and test datasets$
-  train_data[, c(paste0("EMA", "_", fast_EMA),
-                 paste0("EMA", "_", slow_EMA),
-                 "exit_value","exit_condition",
-                 "crossover",
+  train_data[, c("fast_EMA",
+                 "slow_EMA",
+                 "volume_EMA",
+                 "exit_condition",
+                 "crossover_EMA",
                  "crossover_Volume",
+                 "candle_type",
                  "action",
                  "Units",
                  "Price",
                  "tp",
                  "ult_sl",
-                 "trail_sl",
                  "x",
-                 "id") := list(NA,NA, NA, NA,NA,NA,NA, NA, NA, NA, NA, NA, NA, NA) ]
+                 "id") := list(NA,NA,NA, NA, NA,NA,NA,NA, NA, NA, NA, NA, NA, NA) ]
   
-  test_data[, c(paste0("EMA", "_", fast_EMA),
-                paste0("EMA", "_", slow_EMA),
-                "exit_value",
+  test_data[, c("fast_EMA",
+                "slow_EMA",
+                "volume_EMA",
                 "exit_condition",
-                "crossover",
+                "crossover_EMA",
                 "crossover_Volume",
+                "candle_type",
                 "action",
                 "Units",
                 "Price",
                 "tp",
                 "ult_sl",
-                "trail_sl",
                 "x",
-                "id") := list(NA, NA, NA, NA,NA,NA,NA, NA, NA, NA ,NA, NA, NA, NA) ]
+                "id") := list(NA,NA,NA, NA, NA,NA,NA,NA, NA, NA, NA, NA, NA, NA) ]
   
   # Loop to evaluate last line of the test dataset
   for (i in 1:nrow(test_data)) {
@@ -2212,13 +2213,23 @@ cross_EMA_stoploss <- function(fast_EMA, slow_EMA, takeprofit, stoploss_trail,st
     fut <- rbind(train_data, test_data[i, ])
     
     # Create indicators
-    fut[, c(paste0("EMA", "_", fast_EMA),
-            paste0("EMA", "_", slow_EMA)) := list(EMA(close, n = fast_EMA),
-                                                  EMA(close, n = slow_EMA)) ]
+    fut[, fast_EMA := EMA(close, n = EMA_fast)]
+    fut[, slow_EMA := EMA(close, n = EMA_slow)]
+    fut[, volume_EMA := EMA(volume, n = EMA_volume)]
     
+    # Candle type
+    fut$candle_type[fut$open > fut$close] <- "bearish"
+    fut$candle_type[fut$open < fut$close] <- "bullish"
+    fut$candle_type[fut$open == fut$close] <- "neutral"
     
-    fut$crossover[get(paste0("EMA", "_", fast_EMA), fut) > get(paste0("EMA", "_", slow_EMA), fut)] <- "faster_EMA_higher"
-    fut$crossover[get(paste0("EMA", "_", fast_EMA), fut) <= get(paste0("EMA", "_", slow_EMA), fut)] <- "faster_EMA_lower"
+    # Price action
+    fut$crossover_EMA[fut$fast_EMA > fut$slow_EMA] <- "faster_EMA_higher"
+    fut$crossover_EMA[fut$fast_EMA <= fut$slow_EMA] <- "faster_EMA_lower"
+    
+    # Volume action
+    fut$crossover_Volume[fut$volume > fut$volume_EMA] <- "volume_higher"
+    fut$crossover_Volume[fut$volume <= fut$volume_EMA] <- "volume_lower"
+    
     fut$x <- 1:nrow(fut)
     
     if(plot.it == TRUE){
@@ -2237,13 +2248,6 @@ cross_EMA_stoploss <- function(fast_EMA, slow_EMA, takeprofit, stoploss_trail,st
       
       points(rownames(plot_df)[plot_df$x %in% df_points_buy$x], df_points_buy$y, col ="green", pch = 19)
       points(rownames(plot_df)[plot_df$x %in% df_points_sell$x], df_points_sell$y, col ="red", pch = 19)
-      
-      # plot(plot_df$RSI, type ="l")
-      # abline(h = RSI_below,  col = "red", lty = 5, lwd = 2)
-      # 
-      # plot(plot_df$volume, type ="l")
-      # lines(plot_df$EMA_volume,  col = "red", lty = 5, lwd = 2)
-      # abline(h = plot_df$EMA_volume[nrow(plot_df)],  col = "red", lty = 5, lwd = 2)
     }
     
     
@@ -2261,81 +2265,16 @@ cross_EMA_stoploss <- function(fast_EMA, slow_EMA, takeprofit, stoploss_trail,st
       ult_sl <- 0
     }
     
-    
-    # Trailing stop loss
-    
-    # id_trail <- tail(fut$id[!is.na(fut$id)], 1)
-    # 
-    # if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] > fut$close[nrow(fut)-1] )  ){
-    #   
-    #   trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
-    #   
-    #   if(trail_sl > max(fut$trail_sl[which(fut$id == id_trail)+1], na.rm =T)){
-    #     trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
-    #     
-    #   }else{
-    #     
-    #     trail_sl <- max(fut$trail_sl[which(fut$id == id_trail)+1])
-    #   }
-    #   
-    #   
-    # 
-    # } else if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] <= fut$close[nrow(fut)-1]) ){
-    #   
-    #   trail_sl <- max(fut$trail_sl[which(fut$id == id_trail)])
-    # 
-    # } else {
-    #   
-    #   trail_sl <-0 
-    # } 
-    # 
-    
-    # if(length(trail_sl) == 0 ){
-    #   
-    #   trail_sl <- 0
-    # }
-    
-    # Trailing stop loss
-    # browser()
-    if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] > fut$close[nrow(fut)-1] )  ){
-      
-      trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
-      if( trail_sl < tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)){
-        trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
-        
-      }else {
-        trail_sl <- fut$close[nrow(fut)] - stoploss_trail * fut$close[nrow(fut)]
-        
-      }
-      
-      
-    } else if (fut$action[nrow(fut)-1] %in% c("buy", "keep") & ( fut$close[nrow(fut)] <= fut$close[nrow(fut)-1] ) ){
-      
-      trail_sl <- tail(fut$trail_sl[!is.na(fut$trail_sl)], 1)
-    } else {
-      
-      trail_sl <-0
-    }
-    
-    
-    if(length(trail_sl) == 0 ){
-      
-      trail_sl <- 0
-    }
-    # browser()
-    
-    
-    
     fut$tp[nrow(fut)] <- tp
     fut$ult_sl[nrow(fut)] <- ult_sl
-    fut$trail_sl[nrow(fut)] <- trail_sl
+      
     
-    
-    fut$exit_condition[nrow(fut)] <- fut$trail_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$ult_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$tp[nrow(fut)] < fut$close[nrow(fut)]
+    fut$exit_condition[nrow(fut)] <- fut$ult_sl[nrow(fut)] > fut$close[nrow(fut)] | fut$tp[nrow(fut)] < fut$close[nrow(fut)]
     
     # BUY Condition
     if ((is.na(fut$action[nrow(fut) - 1]) |  fut$action[nrow(fut) - 1] %in% c("sell", "no action"))
-        & fut$crossover[nrow(fut)] == "faster_EMA_higher") {
+        & fut$crossover_EMA[nrow(fut)] == "faster_EMA_higher" & fut$candle_type[nrow(fut)] =="bullish" &
+        fut$crossover_Volume[nrow(fut)] == "volume_higher") {
       
       fut$action[nrow(fut)] <- "buy"
       fut$Units[nrow(fut)] <- initial_budget / fut$close[nrow(fut)]
@@ -2344,7 +2283,7 @@ cross_EMA_stoploss <- function(fast_EMA, slow_EMA, takeprofit, stoploss_trail,st
       
       # Keep Condition  
     } else if (fut$action[nrow(fut) - 1] %in% c("buy", "keep") &
-               fut$crossover[nrow(fut)] == "faster_EMA_higher" &
+               fut$crossover_EMA[nrow(fut)] == "faster_EMA_higher" &
                fut$exit_condition[nrow(fut)] == FALSE ) {
       
       fut$action[nrow(fut)] <- "keep"
@@ -2353,7 +2292,8 @@ cross_EMA_stoploss <- function(fast_EMA, slow_EMA, takeprofit, stoploss_trail,st
       
       # Sell Condition
     } else if (fut$action[nrow(fut) - 1] %in% c("keep", "buy") &
-               (fut$crossover[nrow(fut)] %in% c("faster_EMA_lower", "faster_EMA_higher") &  fut$exit_condition[nrow(fut)] == TRUE | fut$crossover[nrow(fut)] %in% c("faster_EMA_lower"))) {
+               (fut$crossover_EMA[nrow(fut)] %in% c("faster_EMA_lower", "faster_EMA_higher") & 
+                fut$exit_condition[nrow(fut)] == TRUE | fut$crossover_EMA[nrow(fut)] %in% c("faster_EMA_lower"))) {
       
       
       fut$action[nrow(fut)] <- "sell"
@@ -2364,13 +2304,13 @@ cross_EMA_stoploss <- function(fast_EMA, slow_EMA, takeprofit, stoploss_trail,st
       
       # No Action Condition
     } else if ( fut$action[nrow(fut) - 1] %in% c("sell", "no action") | (is.na(fut$action[nrow(fut) - 1])
-                                                                         & fut$crossover[nrow(fut)] == "faster_EMA_lower")) {
+                                                                         & fut$crossover_EMA[nrow(fut)] == "faster_EMA_lower")) {
       
       fut$action[nrow(fut)] <- "no action"
     }
     
     train_data <- fut
-    print(i)
+    # print(i)
     if(plot.it == TRUE){
       Sys.sleep(0.1)
       # flush.console()

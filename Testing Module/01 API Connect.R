@@ -2,7 +2,8 @@
 # screen -S pullingBTC R
 .rs.restartR()
 rm(list = ls())
-
+### retire this git, go to binance
+## Take best funtionalities from here move to binance
 # Source functions
 path_source <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Source"
 files.sources = list.files(path_source, full.names = T)
@@ -13,8 +14,7 @@ sapply(files.sources, source)
 unix_time <- "start_of_time"
 
 # Choose any pair to pull
-pair <- "BTCEUR"
-# pair <- "XETHZEUR"
+pair <- "XETHZEUR"
 # pair <- "ALGOEUR"
 # pair <- "KAVAEUR"
 # pair <- "GNOEUR"

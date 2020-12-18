@@ -1,5 +1,7 @@
 rm(list = ls())
-source(paste("/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1", "10 Utils.R", sep = "/"))
+path_source <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Source"
+files.sources = list.files(path_source, full.names = T)
+sapply(files.sources, source)
 setDTthreads(1)
 
 api_info <- read.table(paste("/media/chris/DATA/Documents/Bot_Trading", "API_Keys.txt", sep = "/"), sep = ";", header = T)
@@ -54,7 +56,7 @@ for (i in 1:length(EUR_pairs)){
     geom_line(aes(x = x, y = spline_fast), color ="red") +
     geom_line(aes(x = x, y = spline_slow), color ="blue") +
     ggtitle(label =paste0("Sharpe = ", round(tail(df$sharpe, 1), 3), " pair = ",EUR_pairs[i]  ))
-  p1
+  print(p1)
   # p2 <- ggplot(data = df, aes(x=x, y = deriv)) +
   #   geom_line(color ="red", size = 0.7)+ geom_hline(yintercept=0, size =0.2)
   # 
@@ -89,7 +91,7 @@ for (i in 1:length(EUR_pairs)){
   })
   print(i/length(EUR_pairs))
   print(paste0("Sharpe Ratio for: ",  EUR_pairs[i]," ", round(unique(df$sharpe), 4))) 
-  Sys.sleep(10)
+  Sys.sleep(3)
   
 }
 

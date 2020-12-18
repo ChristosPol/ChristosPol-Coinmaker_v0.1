@@ -6,14 +6,17 @@ paraller_exec <-TRUE
 initial_budget <- 200
 
 # testing parameters
-spar_fast <- data.frame(spar_fast = seq(0.1, 0.9, 0.1), flag = 1)
-spar_slow <- data.frame(spar_slow = seq(0.1, 1, 0.1), flag = 1)
-tp <- data.frame(tp = c(1000), flag = 1)
-sl <- data.frame(sl = c(1000), flag = 1)
+EMA_fast <- data.frame(EMA_fast = seq(20, 200, 20), flag = 1)
+EMA_slow <- data.frame(EMA_slow = seq(50, 400, 20), flag = 1)
+EMA_volume <- data.frame(EMA_volume = c(10), flag = 1)
+tp <- data.frame(tp = c(0.03, 0.05, 1000), flag = 1)
+sl <- data.frame(sl = c(0.05,1000), flag = 1)
 
-testing_params <- left_join(spar_fast, spar_slow) %>% left_join(tp)%>% left_join(sl)
 
-testing_params <- subset(testing_params, testing_params$spar_slow > testing_params$spar_fast)
+testing_params <- left_join(EMA_fast, EMA_slow) %>%
+  left_join(EMA_volume) %>% left_join(tp) %>% left_join(sl)
+
+testing_params <- subset(testing_params, testing_params$EMA_slow > testing_params$EMA_fast)
 testing_params$flag <- NULL
 testing_params <- as.data.table(testing_params)
 
@@ -28,24 +31,26 @@ for (i in 1:length(klines)){
   candles_recent <- klines[[i]]
   
   # Intitial data frame
-  train_n <- ceiling(nrow(candles_recent) / 4)
+  train_n <- ceiling(nrow(candles_recent) / 10)
   train_data <- candles_recent[1:train_n, ]
   
   # Test, same 
   test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
   
-  cl <- parallel::makeForkCluster(3)
+  cl <- parallel::makeForkCluster(2)
   doParallel::registerDoParallel(cl)
   start_time <- Sys.time()
   results <- foreach(i = 1:nrow(testing_params),.verbose =T , .combine = 'rbind') %dopar% {
-    myresult <- splines_fast_slow_cross(takeprofit = testing_params$tp[i],
-                                        stoploss_ult = testing_params$sl[i],
-                                        spar_fast = testing_params$spar_fast[i],
-                                        spar_slow = testing_params$spar_slow[i],
+    myresult <- cross_EMA_stoploss(EMA_fast = testing_params$EMA_fast[i],
+                                   EMA_slow = testing_params$EMA_slow[i],
+                                   EMA_volume = testing_params$EMA_volume[i],
+                                   takeprofit = testing_params$tp[i],
+                                   stoploss_ult = testing_params$sl[i],
                                         plot.it = FALSE)
     
-    params <- paste(spar_fast = testing_params$spar_fast[i],
-                    spar_slow = testing_params$spar_slow[i],
+    params <- paste(EMA_fast = testing_params$EMA_fast[i],
+                    EMA_slow = testing_params$EMA_slow[i],
+                    EMA_volume = testing_params$EMA_volume[i],
                     takeprofit = testing_params$tp[i],
                     stoploss_ult = testing_params$sl[i],
                     sep ="_")
@@ -65,6 +70,8 @@ print(end_time - start_time)
 filelist <- mapply(cbind, all_results, "Interval" = names(klines), SIMPLIFY = F)
 final <- do.call(rbind, filelist)
 final$pair <- pair
+
+
 View(final)
 
 saveRDS(final, file ="/media/chris/DATA/Documents/Bot_Trading/Backtesting_results/latest_tp_sl_fast_slow_splines_cross_60min_201906_ETHEUR.rds")
