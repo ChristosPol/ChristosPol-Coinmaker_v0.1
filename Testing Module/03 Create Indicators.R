@@ -51,8 +51,6 @@ segment_sell <- myresult[action %in%c("sell"), ]
 
 p1 <- ggplot(data= myresult, aes(x=full_date_time, y=close)) +
   geom_line(alpha = 0.5) +
-  geom_line(aes(x = full_date_time, y = fast_EMA), color ="red")+
-  geom_line(aes(x = full_date_time, y = slow_EMA), color ="green")+
   geom_point(data = segment_buy, aes(x=full_date_time, y=close),
              color ="green", size = 2) +
   geom_point(data = segment_sell, aes(x=full_date_time, y=close),

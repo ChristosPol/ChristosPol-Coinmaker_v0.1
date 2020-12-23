@@ -23,9 +23,12 @@ suppressMessages(library(gifski))
 suppressMessages(library(gridExtra))
 suppressMessages(library(R.utils))
 suppressMessages(library(plotly))
+suppressMessages(library(Metrics))
+suppressMessages(library(plm))
+suppressMessages(library(randomForest))
 
 # Options
-# setDTthreads(1)
+setDTthreads(1)
 options(stringsAsFactors = FALSE)
 
 # API info

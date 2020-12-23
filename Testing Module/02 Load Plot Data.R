@@ -12,9 +12,9 @@ intervals <- paste(ticks, units, sep = " ")
 # Load trades and conver to OHLC, applies filtering
 klines <- trades_to_OHLC(pair = pair,
                interval = intervals,
-               from_date = "2018-01-01",
-               to_date = "2020-09-01",
-               date_subset = T)
+               from_date = "2020-07-01",
+               to_date = "2020-10-01",
+               date_subset = F)
 names(klines) <- gsub(" ", "_", intervals)
 
 # Get a first visual
@@ -26,3 +26,15 @@ fig <- fig %>% layout(title = pair,
                       xaxis = list(rangeslider = list(visible = F)))
 fig
 
+
+df_ETH <- copy(df)
+
+df_BTC <- copy(klines[[1]])
+cols <- c("close", "volume", "full_date_time")
+df_BTC <- df_BTC[, ..cols] 
+colnames(df_BTC)[1] <- "close_BTC"
+colnames(df_BTC)[2] <- "volume_BTC"
+
+# JOIN
+df_comb <- left_join(df_ETH, df_BTC)
+View(df_comb)

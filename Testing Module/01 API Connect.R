@@ -11,10 +11,11 @@ sapply(files.sources, source)
 
 # Choose which unix time to use for pulling data
 # Choose from ["start_of_time", "manually", "latest_available"]
-unix_time <- "start_of_time"
+unix_time <- "latest_available"
 
 # Choose any pair to pull
 pair <- "XETHZEUR"
+# pair <- "BTCEUR"
 # pair <- "ALGOEUR"
 # pair <- "KAVAEUR"
 # pair <- "GNOEUR"
@@ -41,8 +42,9 @@ if (unix_time == "start_of_time") {
   file <- paste0(pair_data_results, "/", pair, ".csv.gz")
   nL <- countLines(file)
   dt <- fread(file, skip = nL-1)
-  initial_id <- dt$V7  
+  initial_id <- dt$V6  
 }
  
 # Pull historical trades since initial id from epoch time
 hist_trades_pair(sleep = 3, hist_id = initial_id, pair = pair)
+
