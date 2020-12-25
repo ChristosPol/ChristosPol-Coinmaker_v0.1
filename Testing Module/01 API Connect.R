@@ -11,11 +11,11 @@ sapply(files.sources, source)
 
 # Choose which unix time to use for pulling data
 # Choose from ["start_of_time", "manually", "latest_available"]
-unix_time <- "latest_available"
+unix_time <- "start_of_time"
 
 # Choose any pair to pull
-pair <- "XETHZEUR"
-# pair <- "BTCEUR"
+# pair <- "XETHZEUR"
+pair <- "BTCEUR"
 # pair <- "ALGOEUR"
 # pair <- "KAVAEUR"
 # pair <- "GNOEUR"
