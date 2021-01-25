@@ -5,7 +5,7 @@ df <- klines[[1]]
 
 # Create prediction variable
 df$prediction <- shift(df$close, type = "lead")
-df$UPDOWN <- ifelse(df$close-df$prediction > 0, )
+df$UPDOWN <- ifelse(df$close-df$prediction > 0, "DOWN", "UP")
 
 df$movement <- round(((df$prediction - df$close) / df$prediction )*100, 3)
 df$returns <- c(diff(df$close), 0)
@@ -19,8 +19,7 @@ df$groups <- as.character(rep(reps, lens))
 
 df <- as.data.table(df %>% group_by(groups) %>% mutate(act = sum(movement)) %>% ungroup())
 
-
-df[act > 0.6, pos := "enter"]
+df[act > 4, pos := "enter"]
 df$pos[is.na(df$pos)] <- "no_action"
 cols <- c("groups", "pos")
 df[, id := seq_len(.N), by = cols]
@@ -29,12 +28,12 @@ df[pos == "no_action", id := NA]
 df[pos == "enter" & id != 1, id := NA]
 df$id[is.na(df$id)] <- "no_action"
 df$id[df$id == 1 ] <- "enter"
-table(df$id)
 
 df$profits_opt <- NA
 df$profits_opt[df$pos =="enter"] <-  df$returns[df$pos =="enter"]
 # 
 sum(df$profits_opt, na.rm = T)
+
 
 # Add candle type
 df$candle_type <- NA
@@ -63,11 +62,28 @@ df$EMA_6 <- EMA(df$close, n = 50)
 df$EMA_7 <- EMA(df$close, n = 100)
 df$EMA_8 <- EMA(df$close, n = 150)
 df$EMA_9 <- EMA(df$close, n = 200)
+df$EMA_10 <- EMA(df$close, n = 250)
+df$EMA_11 <- EMA(df$close, n = 300)
+df$EMA_12 <- EMA(df$close, n = 350)
+df$EMA_13 <- EMA(df$close, n = 400)
+df$EMA_14 <- EMA(df$close, n = 450)
+df$EMA_15 <- EMA(df$close, n = 500)
+df$EMA_16 <- EMA(df$close, n = 600)
+
 
 df$roc_1 <- momentum(df$close, n = 1)
 df$roc_2 <- momentum(df$close, n = 3)
-df$roc_3 <- momentum(df$close, n = 10)
-df$roc_4 <- momentum(df$close, n = 20)
+df$roc_3 <- momentum(df$close, n = 9)
+df$roc_4 <- momentum(df$close, n = 15)
+df$roc_5 <- momentum(df$close, n = 20)
+df$roc_6 <- momentum(df$close, n = 30)
+df$roc_7 <- momentum(df$close, n = 50)
+df$roc_8 <- momentum(df$close, n = 100)
+df$roc_9 <- momentum(df$close, n = 120)
+df$roc_10 <- momentum(df$close, n = 150)
+df$roc_11 <- momentum(df$close, n = 200)
+
+
 
 # Candle description
 df$HL <- df$high - df$low
@@ -79,12 +95,24 @@ df$RSI_2 <- RSI(df$close, n = 10)
 df$RSI_3 <- RSI(df$close, n = 14)
 df$RSI_4 <- RSI(df$close, n = 20)
 df$RSI_5 <- RSI(df$close, n = 25)
+df$RSI_6 <- RSI(df$close, n = 1)
+df$RSI_7 <- RSI(df$close, n = 2)
+df$RSI_8 <- RSI(df$close, n = 7)
+df$RSI_9 <- RSI(df$close, n = 40)
+df$RSI_10 <- RSI(df$close, n = 50)
+df$RSI_11 <- RSI(df$close, n = 70)
 
 # Standard deviation
 df$sd_1 <- rollapplyr(df$close, 5, sd, fill = NA)
 df$sd_2 <- rollapplyr(df$close, 10, sd, fill = NA)
 df$sd_3 <- rollapplyr(df$close, 14, sd, fill = NA)
 df$sd_4 <- rollapplyr(df$close, 20, sd, fill = NA)
+df$sd_5 <- rollapplyr(df$close, 50, sd, fill = NA)
+df$sd_6 <- rollapplyr(df$close, 75, sd, fill = NA)
+df$sd_7 <- rollapplyr(df$close, 100, sd, fill = NA)
+df$sd_8 <- rollapplyr(df$close, 200, sd, fill = NA)
+
+
 
 # MACD default
 macd <- MACD(df[, "close"])
@@ -92,21 +120,21 @@ df <- cbind(df,macd)
 
 # MFI
 df$mfi_1 <- MFI(df[, c("high", "low", "close")], df[, "volume"],
-              n = 5)
+                n = 5)
 df$mfi_2 <- MFI(df[, c("high", "low", "close")], df[, "volume"],
-              n = 10)
+                n = 10)
 df$mfi_3 <- MFI(df[, c("high", "low", "close")], df[, "volume"],
-              n = 14)
+                n = 14)
 df$mfi_4 <- MFI(df[, c("high", "low", "close")], df[, "volume"],
-              n = 20)
+                n = 20)
 
 # OBV default
-obv <- OBV(df[, "close"], df[, "volume"])
-df$obv <- EMA(obv, n = 25)
+df$obv <- OBV(df[, "close"], df[, "volume"])
+# df$obv <- EMA(obv, n = 25)
 
 # Bollinger
 bollinger_1 <- BBands(df[ ,c("high", "low", "close")], n = 10,
-                    sd = 1)
+                      sd = 1)
 colnames(bollinger_1) <- paste(colnames(bollinger_1), "1", sep = "_")
 #
 #
@@ -125,11 +153,19 @@ bollinger_4 <- BBands(df[ ,c("high", "low", "close")], n = 20,
 colnames(bollinger_4) <- paste(colnames(bollinger_4), "4", sep = "_")
 
 
-df <- cbind(df, bollinger_1, bollinger_2, bollinger_3, bollinger_4)
+# df <- cbind(df, bollinger_1, bollinger_2, bollinger_3, bollinger_4)
+df <- cbind(df, bollinger_4)
 
 # Stohastic default
 stochOSC <- stoch(df[, c("high", "low", "close")])
 df <- cbind(df, stochOSC)
+
+df$williams_1 <- WPR(df[, c("high", "low", "close")], n = 5)
+df$williams_2 <- WPR(df[, c("high", "low", "close")], n = 10)
+df$williams_3 <- WPR(df[, c("high", "low", "close")], n = 14)
+df$williams_4 <- WPR(df[, c("high", "low", "close")], n = 20)
+
+
 
 # ADX
 ADX_1 <- ADX(df[,c("high","low","close")], n = 5)
@@ -189,15 +225,53 @@ colnames(atr_4) <- paste(colnames(atr_4), "4", sep = "_")
 df <- cbind(df, atr_1, atr_2, atr_3, atr_4)
 # df <- cbind(df, atr_3)
 
-# df$pos <- as.factor(df$pos)
+df$clv <- CLV(df[,c("high","low","close")])
+
+df$cmf <- CMF(df[,c("high","low","close")], df[,c("volume")])
+
+df$cmo <- CMO(df[,"close"])
+
+df$hma_1 <- HMA(df[,"close"], n =10)
+df$hma_2 <- HMA(df[,"close"], n =30)
+df$hma_3 <- HMA(df[,"close"], n =70)
+df$hma_4 <- HMA(df[,"close"], n =120)
+df$hma_5 <- HMA(df[,"close"], n =200)
+df$hma_6 <- HMA(df[,"close"], n =250)
+df$hma_7 <- HMA(df[,"close"], n =300)
+df$hma_8 <- HMA(df[,"close"], n =400)
+
+
+# df$priceDPO <- DPO(df[,"close"])
+# df$volumeDPO <- DPO(df[,"volume"])
+
+ohlc <- df[,c("open","high","low","close")]
+df$vClose <- volatility(ohlc, calc="close")
+df$vClose0 <- volatility(ohlc, calc="close", mean0=TRUE)
+df$vGK <- volatility(ohlc, calc="garman")
+
+# kst <- KST(df[,"close"])
+
+# pbands.close <- PBands( df[,"close"] )
+df$sar <- SAR(df[,c("high","low")])
+
+tdi <- TDI(df[,"close"], n=30)
+df <- cbind(df, tdi)
+
+df$vhf.close <- VHF(df[,"close"])
+
+
+
+
+
 
 # Define datasets
 # train_data <- df[full_date_time <= "2020-10-23 05:00:00 CET"]
 # test_data <- df[full_date_time >= "2020-11-07 13:00:00 CET"]
 df$pos <- as.factor(df$pos)
 df$id <- as.factor(df$id)
-train_data <- df[full_date_time < "2020-08-20 00:00:00", ]
-test_data <- df[full_date_time >= "2020-08-20 00:00:00", ]
+train_data <- df[full_date_time < "2020-06-01 00:00:00", ]
+test_data <- df[full_date_time >= "2020-06-01 00:00:00", ]
+
 
 
 # train_data <- df[full_date_time <= "2020-11-18 05:00:00 CET"]
@@ -205,22 +279,24 @@ test_data <- df[full_date_time >= "2020-08-20 00:00:00", ]
 
 predictors <- colnames(df)[!colnames(df) %in% c("interval", "full_date_time", "prediction",
                                                 "movement", "returns","positive", "groups", "pos", "act",
-                                                "profits_opt", "id")]
+                                                "profits_opt", "id", "UPDOWN")]
 vars <- colnames(df)[!colnames(df) %in% c("interval", "full_date_time", "prediction",
                                           "movement", "positive", "groups", "pos", "close", "act", "returns",
                                           "enter_opt","candle_type", "candle_type",
                                           "profits_opt", "id")]
-fmla <- as.formula(paste("id ~ ", paste(predictors, collapse= "+")))
+fmla <- as.formula(paste("pos ~ ", paste(predictors, collapse= "+")))
 
-predictors <- c("id", predictors)
+predictors <- c("pos", predictors)
 train_data <- train_data[, ..predictors]
-10.87
+
 # Fit a classifier
 model <- randomForest(fmla,
                         data = na.omit(train_data), 
                       importance = T,
-                      ntree = 500, do.trace = T, mtry = 30)
+                      ntree = 200, do.trace = T)
 
+model <- svm(fmla,
+                      data = na.omit(train_data))
 plot(model)
 
 summary(model)
@@ -240,11 +316,11 @@ model$confusion
 # 
 
 fit1 <- predict(model, test_data)
-
+View(test_data)
 
 eval1 <- cbind(test_data, fit1)
 eval1 <- eval1[, -..vars]
-
+View(eval1)
 # eval1$movement_fit <- round(((eval1$fit1 - eval1$close) / eval1$fit1 )*100, 3)
 # eval1$enter_fit[eval1$movement_fit > 1] <- 1
 # eval1$profits_fit <- eval1$enter_fit * eval1$returns
@@ -257,8 +333,9 @@ sum(eval1$profits_fit, na.rm = T)/sum(eval1$profits_opt, na.rm = T)
 sum(eval1$profits_fit, na.rm = T)
 # plot(density(eval1$profits_fit[!is.na(eval1$profits_fit)]))
 # mean(eval1$profits_fit[!is.na(eval1$profits_fit)])
+[1] 449.4
 
-
+0.0154026
 
 
 

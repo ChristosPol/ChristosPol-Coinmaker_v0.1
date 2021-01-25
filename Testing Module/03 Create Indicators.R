@@ -16,6 +16,26 @@ train_data <- candles_recent[1:train_n, ]
 test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 
 
+myresult <- Support_Resistance(takeprofit = 0.015, stoploss_trail = 1000,stoploss_ult = 0.02
+                               ,plot.it= T,n_sort = 3, roll= 50)
+
+myresult <- Volume_trading(EMA_volume = 10,
+                           takeprofit = 0.02,
+                           stoploss_trail = 1000,
+                           stoploss_ult = 0.03, 
+                           times_vol = 3, 
+                           candle_action_long= "bullish",
+                           rsi_period = 10,
+                           plot.it = T)
+  
+myresult <- splines_fast_slow_cross(spar_fast=0.3,spar_slow=1, takeprofit=0.01,
+                                    stoploss_ult=0.03,plot.it=T)
+  
+# Strategy using volumes spikes and RSI oversold conditions
+myresult <- Pure_RSI_Volume_Trailing(RSI_Period=10, 
+                         RSI_below=20, EMA_volume=10,
+                                     takeprofit=0.02, stoploss_trail=10000,stoploss_ult=0.04,
+                                     times_vol=0, plot.it=T)
 # myresult <- splines_fast_slow_cross_eff(spar_fast = 0.1, spar_slow = 0.6)
 # df <- myresult
 # df$returns <- c(lag(diff(df$close)), 0)
@@ -30,11 +50,26 @@ test_data <- candles_recent[(train_n + 1):nrow(candles_recent), ]
 #                                     stoploss_ult = 1000,
 #                                     plot.it = F)
 
-myresult <- cross_EMA_stoploss(EMA_fast = 10,
-                               EMA_slow = 15,
-                               EMA_volume = 10,
-                               takeprofit = 0.2, 
-                               stoploss_ult = 1000, plot.it = F)
+# myresult <- cross_EMA_stoploss(EMA_fast = 10,
+#                                EMA_slow = 15,
+#                                EMA_volume = 10,
+#                                takeprofit = 0.2, 
+#                                stoploss_ult = 1000, plot.it = F)
+
+# myresult <- splines_fast_slow_cross(spar_fast = 0.5,
+#                                     spar_slow = 0.8,
+#                                     takeprofit = 0.05,
+#                                     stoploss_ult = 0.02, 
+#                                     plot.it = F)
+  
+
+
+# Volume_trading(EMA_volume = 30, takeprofit = 0.02, stoploss_trail = 0.01,stoploss_ult=0.01, times_vol=3, candle_action_long=
+#                  "bullish")
+
+
+myresult <- cross_EMA_stoploss_trail_simple(slow_SMA= 180,takeprofit=0.01, stoploss_trail=0.02,stoploss_ult=0.01)
+  
   
 calculate_profits(myresult)
 
@@ -44,21 +79,22 @@ if(myresult$action[nrow(myresult)] == "keep") {
   myresult$Price[nrow(myresult)] <- myresult$close[nrow(myresult)] * myresult$Units[nrow(myresult)]
 }
 
-myresult$x <- 1:nrow(myresult)
+dfplot <- myresult[7500:10000,]
+dfplot$x <- 1:nrow(dfplot)
 
-segment_buy <- myresult[action %in%c("buy"), ]
-segment_sell <- myresult[action %in%c("sell"), ]
+segment_buy <- dfplot[action %in%c("buy"), ]
+segment_sell <- dfplot[action %in%c("sell"), ]
 
-p1 <- ggplot(data= myresult, aes(x=full_date_time, y=close)) +
+p1 <- ggplot(data= dfplot, aes(x=full_date_time, y=close)) +
   geom_line(alpha = 0.5) +
   geom_point(data = segment_buy, aes(x=full_date_time, y=close),
              color ="green", size = 2) +
   geom_point(data = segment_sell, aes(x=full_date_time, y=close),
-             color ="red", size = 2);p1
-  # geom_line(aes(x=full_date_time, y=Mean), color ="green", size = 0.2)+
+             color ="red", size = 2) +
+  geom_line(aes(x=full_date_time, y=SMA), color ="red", size = 0.2)
   # geom_line(aes(x=full_date_time, y=Upper), color ="red", size = 0.2)+
   # geom_line(aes(x=full_date_time, y=Lower), color ="red", size = 0.2);p1
-
+p1
 
 df_red <- myresult[0:2500,] 
 segment_buy <- df_red[action %in%c("buy"), ]

@@ -51,6 +51,14 @@ df$EMA_6 <- EMA(df$close, n = 50)
 df$EMA_7 <- EMA(df$close, n = 100)
 df$EMA_8 <- EMA(df$close, n = 150)
 df$EMA_9 <- EMA(df$close, n = 200)
+df$EMA_10 <- EMA(df$close, n = 250)
+df$EMA_11 <- EMA(df$close, n = 300)
+df$EMA_12 <- EMA(df$close, n = 350)
+df$EMA_13 <- EMA(df$close, n = 400)
+df$EMA_14 <- EMA(df$close, n = 450)
+df$EMA_15 <- EMA(df$close, n = 500)
+df$EMA_16 <- EMA(df$close, n = 600)
+
 
 df$roc_1 <- momentum(df$close, n = 1)
 df$roc_2 <- momentum(df$close, n = 3)
@@ -60,6 +68,9 @@ df$roc_5 <- momentum(df$close, n = 20)
 df$roc_6 <- momentum(df$close, n = 30)
 df$roc_7 <- momentum(df$close, n = 50)
 df$roc_8 <- momentum(df$close, n = 100)
+df$roc_9 <- momentum(df$close, n = 120)
+df$roc_10 <- momentum(df$close, n = 150)
+df$roc_11 <- momentum(df$close, n = 200)
 
 
 
@@ -73,12 +84,24 @@ df$RSI_2 <- RSI(df$close, n = 10)
 df$RSI_3 <- RSI(df$close, n = 14)
 df$RSI_4 <- RSI(df$close, n = 20)
 df$RSI_5 <- RSI(df$close, n = 25)
+df$RSI_6 <- RSI(df$close, n = 1)
+df$RSI_7 <- RSI(df$close, n = 2)
+df$RSI_8 <- RSI(df$close, n = 7)
+df$RSI_9 <- RSI(df$close, n = 40)
+df$RSI_10 <- RSI(df$close, n = 50)
+df$RSI_11 <- RSI(df$close, n = 70)
 
 # Standard deviation
 df$sd_1 <- rollapplyr(df$close, 5, sd, fill = NA)
 df$sd_2 <- rollapplyr(df$close, 10, sd, fill = NA)
 df$sd_3 <- rollapplyr(df$close, 14, sd, fill = NA)
 df$sd_4 <- rollapplyr(df$close, 20, sd, fill = NA)
+df$sd_5 <- rollapplyr(df$close, 50, sd, fill = NA)
+df$sd_6 <- rollapplyr(df$close, 75, sd, fill = NA)
+df$sd_7 <- rollapplyr(df$close, 100, sd, fill = NA)
+df$sd_8 <- rollapplyr(df$close, 200, sd, fill = NA)
+
+
 
 # MACD default
 macd <- MACD(df[, "close"])
@@ -126,7 +149,10 @@ df <- cbind(df, bollinger_4)
 stochOSC <- stoch(df[, c("high", "low", "close")])
 df <- cbind(df, stochOSC)
 
-df$williams <- WPR(df[, c("high", "low", "close")], n = 14)
+df$williams_1 <- WPR(df[, c("high", "low", "close")], n = 5)
+df$williams_2 <- WPR(df[, c("high", "low", "close")], n = 10)
+df$williams_3 <- WPR(df[, c("high", "low", "close")], n = 14)
+df$williams_4 <- WPR(df[, c("high", "low", "close")], n = 20)
 
 
 
@@ -199,11 +225,14 @@ df$hma_2 <- HMA(df[,"close"], n =30)
 df$hma_3 <- HMA(df[,"close"], n =70)
 df$hma_4 <- HMA(df[,"close"], n =120)
 df$hma_5 <- HMA(df[,"close"], n =200)
+df$hma_6 <- HMA(df[,"close"], n =250)
+df$hma_7 <- HMA(df[,"close"], n =300)
+df$hma_8 <- HMA(df[,"close"], n =400)
 
 
-df$priceDPO <- DPO(df[,"close"])
+# df$priceDPO <- DPO(df[,"close"])
+# df$volumeDPO <- DPO(df[,"volume"])
 
-df$volumeDPO <- DPO(df[,"volume"])
 ohlc <- df[,c("open","high","low","close")]
 df$vClose <- volatility(ohlc, calc="close")
 df$vClose0 <- volatility(ohlc, calc="close", mean0=TRUE)
@@ -230,11 +259,12 @@ df$vhf.close <- VHF(df[,"close"])
 # test_data <- df[full_date_time >= "2020-11-07 13:00:00 CET"]
 # df$pos <- as.factor(df$pos)
 # df$id <- as.factor(df$id)
-# train_data <- df[full_date_time < "2020-08-20 00:00:00", ]
+train_data <- df[full_date_time < "2020-08-20 00:00:00", ]
+test_data <- df[full_date_time >= "2020-08-20 00:00:00", ]
+
+# train_data <- df[full_date_time >= "2017-01-01 00:00:00" & full_date_time < "2020-08-20 00:00:00", ]
 # test_data <- df[full_date_time >= "2020-08-20 00:00:00", ]
 
-train_data <- df[1:45000, ]
-test_data <- df[45001:nrow(df), ]
 
 # train_data <- df[full_date_time <= "2020-11-18 05:00:00 CET"]
 # test_data <- df[full_date_time > "2020-11-18 05:00:00 CET"]
@@ -242,6 +272,9 @@ test_data <- df[45001:nrow(df), ]
 predictors <- colnames(df)[!colnames(df) %in% c("interval", "full_date_time", "prediction",
                                                 "movement", "returns","positive", "groups", "pos", "act",
                                                 "profits_opt", "id", "UPDOWN", "enter", "profits")]
+
+# predictors <- predictors[!predictors %in% names(which(importance(model)[, 2]<0))]
+
 vars <- colnames(df)[!colnames(df) %in% c("interval", "full_date_time", "prediction",
                                           "movement", "positive", "groups", "pos", "close", "act", "returns",
                                           "enter_opt","candle_type", "candle_type", "enter", "profits",
@@ -257,72 +290,22 @@ train_data <- train_data[, ..predictors]
 model <- randomForest(fmla,
                       data = na.omit(train_data), 
                       importance = T,
-                      ntree = 500, do.trace = T, mtry = 50)
-DOWN 14233  7237   0.3370750
-UP    6751 16567   0.2895188
+                      ntree = 200, do.trace = T, mtry = 80)
+model <- svm(fmla,
+                      data = na.omit(train_data))
+
 # model <- svm(fmla,
 #                       data = na.omit(train_data))
 
 
-# df1 <- na.omit(train_data)
-# x <- df1[, -1]
-# y <- df1$UPDOWN
-# 
-# bestmtry <- tuneRF(x = x, y = y, stepFactor=0.1, improve=1e-8, ntreeTry=500, mtryStart=50)
-# 
-# metric <- "Accuracy"
-# control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
-# tunegrid <- expand.grid(.mtry=c(20:25))
-# rf_gridsearch <- train(fmla, data=na.omit(train_data), method="rf", metric=metric, tuneGrid=tunegrid, trControl=control)
-# print(rf_gridsearch)
-# plot(rf_gridsearch)
 
-
-# library(mlbench)
-# library(randomForest)
-# 
-# y = y
-# X = x
-# 
-# nvar = ncol(X)
-# nrep = 1
-# rf.list = lapply(1:nvar,function(i.mtry) {
-#   oob.errs = replicate(nrep,{
-#     oob.err = tail(randomForest(X,y,mtry=i.mtry,ntree=200, do.trace = T)$err.rate[,1],1)})
-# })
-# plot(replicate(nrep,1:nvar),do.call(rbind,rf.list),col="#12345678",
-#      xlab="mtry",ylab="oob.err",main="tuning mtry by oob.err")
-# rep.mean = sapply(rf.list,mean)
-# rep.sd = sapply(rf.list,sd)
-# points(1:nvar,rep.mean,type="l",col=3)
-# points(1:nvar,rep.mean+rep.sd,type="l",col=2)
-# points(1:nvar,rep.mean-rep.sd,type="l",col=2)
-
-
-plot(model)
-View(importance(model))
-importance(model, type = 1)
-# imp_df <- as.data.frame(?importance(model))
-# imp_df$IncNodePurity <- round(imp_df$IncNodePurity, 2)
-# imp_df$`%IncMSE` <- round(imp_df$`%IncMSE`, 2)
-# 
-# predictors1 <- rownames(imp_df)[which(imp_df$`%IncMSE` >= 10)]
-# 
-# fmla <- as.formula(paste("prediction ~ ", paste(predictors1, collapse= "+")))
-# model <- randomForest(fmla,
-#                       data = na.omit(train_data), importance = T, ntree = 500)
-# 
-# 
 
 fit1 <- predict(model, test_data)
-
-
 eval1 <- cbind(test_data, fit1)
-
 eval1 <- eval1[, -..vars]
 eval1 <- na.omit(eval1)
 # eval1$enter <- ifelse(eval1$fit1 == "UP", 1, NA)
-# 
+names(train_data)
 # eval1$profits_fit <- NA
 # eval1$profits_fit <-  eval1$returns*eval1$enter
 # sum(eval1$profits_fit, na.rm =T)
@@ -330,10 +313,33 @@ eval1 <- na.omit(eval1)
 
 
 eval1$enter_fit[eval1$fit1 == "UP"] <- 1
-eval1$enter_fit[eval1$fit1 == "DOWN"] <- -1
+eval1$enter_fit[eval1$fit1 == "DOWN"] <- 0
+
 
 eval1$profits_fit <- NA
 eval1$profits_fit <-  eval1$returns * eval1$enter_fit
+
+lens <- rle(as.character(eval1$fit1))$lengths
+reps <- 1:length(lens)
+eval1$groups <- as.character(rep(reps, lens))
+eval1$groups[eval1$fit1 == "DOWN"]<- NA
+
+# Trades
+trades <- eval1 %>% group_by(groups)%>%summarise(sum(profits_fit))
+
+
+fees_enter <- eval1 %>% group_by(groups)%>% summarise(fees_enter = head(close, 1)* 0.26/100 )
+fees_exit <- eval1 %>% group_by(groups)%>% summarise(fees_exit = tail(close, 1)* 0.26/100 )
+fees <- left_join(fees_enter, fees_exit)
+fees$fees <- fees$fees_enter + fees$fees_exit
+fees$fees_enter <- NULL
+fees$fees_exit <- NULL
+
+trades <- left_join(trades, fees)
+trades$clean_prof <- trades$`sum(profits_fit)` - trades$fees
+View(trades)
+sum(trades$clean_prof)
+
 sum(eval1$profits_fit, na.rm = T)
 sum(eval1$profits_fit[eval1$fit1 =="UP"])
 sum(eval1$profits_fit[eval1$fit1 =="DOWN"])
