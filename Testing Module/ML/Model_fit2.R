@@ -19,7 +19,7 @@ df$groups <- as.character(rep(reps, lens))
 
 df <- as.data.table(df %>% group_by(groups) %>% mutate(act = sum(movement)) %>% ungroup())
 
-df[act > 4, pos := "enter"]
+df[act > 1, pos := "enter"]
 df$pos[is.na(df$pos)] <- "no_action"
 cols <- c("groups", "pos")
 df[, id := seq_len(.N), by = cols]
@@ -31,9 +31,12 @@ df$id[df$id == 1 ] <- "enter"
 
 df$profits_opt <- NA
 df$profits_opt[df$pos =="enter"] <-  df$returns[df$pos =="enter"]
+View(df)
 # 
 sum(df$profits_opt, na.rm = T)
 
+ggplot(data = df, aes(x = full_date_time, y = close, colour=(pos == "enter")))+
+  geom_line(aes(group=1))
 
 # Add candle type
 df$candle_type <- NA
@@ -72,16 +75,16 @@ df$EMA_16 <- EMA(df$close, n = 600)
 
 
 df$roc_1 <- momentum(df$close, n = 1)
-df$roc_2 <- momentum(df$close, n = 3)
-df$roc_3 <- momentum(df$close, n = 9)
-df$roc_4 <- momentum(df$close, n = 15)
-df$roc_5 <- momentum(df$close, n = 20)
-df$roc_6 <- momentum(df$close, n = 30)
-df$roc_7 <- momentum(df$close, n = 50)
-df$roc_8 <- momentum(df$close, n = 100)
-df$roc_9 <- momentum(df$close, n = 120)
-df$roc_10 <- momentum(df$close, n = 150)
-df$roc_11 <- momentum(df$close, n = 200)
+# df$roc_2 <- momentum(df$close, n = 3)
+# df$roc_3 <- momentum(df$close, n = 9)
+# df$roc_4 <- momentum(df$close, n = 15)
+# df$roc_5 <- momentum(df$close, n = 20)
+# df$roc_6 <- momentum(df$close, n = 30)
+# df$roc_7 <- momentum(df$close, n = 50)
+# df$roc_8 <- momentum(df$close, n = 100)
+# df$roc_9 <- momentum(df$close, n = 120)
+# df$roc_10 <- momentum(df$close, n = 150)
+# df$roc_11 <- momentum(df$close, n = 200)
 
 
 
@@ -93,14 +96,14 @@ df$OC <- df$open - df$close
 df$RSI_1 <- RSI(df$close, n = 5)
 df$RSI_2 <- RSI(df$close, n = 10)
 df$RSI_3 <- RSI(df$close, n = 14)
-df$RSI_4 <- RSI(df$close, n = 20)
-df$RSI_5 <- RSI(df$close, n = 25)
-df$RSI_6 <- RSI(df$close, n = 1)
-df$RSI_7 <- RSI(df$close, n = 2)
-df$RSI_8 <- RSI(df$close, n = 7)
-df$RSI_9 <- RSI(df$close, n = 40)
-df$RSI_10 <- RSI(df$close, n = 50)
-df$RSI_11 <- RSI(df$close, n = 70)
+# df$RSI_4 <- RSI(df$close, n = 20)
+# df$RSI_5 <- RSI(df$close, n = 25)
+# df$RSI_6 <- RSI(df$close, n = 1)
+# df$RSI_7 <- RSI(df$close, n = 2)
+# df$RSI_8 <- RSI(df$close, n = 7)
+# df$RSI_9 <- RSI(df$close, n = 40)
+# df$RSI_10 <- RSI(df$close, n = 50)
+# df$RSI_11 <- RSI(df$close, n = 70)
 
 # Standard deviation
 df$sd_1 <- rollapplyr(df$close, 5, sd, fill = NA)
@@ -130,7 +133,12 @@ df$mfi_4 <- MFI(df[, c("high", "low", "close")], df[, "volume"],
 
 # OBV default
 df$obv <- OBV(df[, "close"], df[, "volume"])
-# df$obv <- EMA(obv, n = 25)
+df$obv_ema1 <- SMA(df$obv, n = 10)
+df$obv_ema2 <- SMA(df$obv, n = 25)
+df$obv_ema3 <- SMA(df$obv, n = 75)
+df$obv_ema4 <- SMA(df$obv, n = 120)
+df$obv_ema5 <- SMA(df$obv, n = 175)
+
 
 # Bollinger
 bollinger_1 <- BBands(df[ ,c("high", "low", "close")], n = 10,
@@ -259,6 +267,9 @@ df <- cbind(df, tdi)
 
 df$vhf.close <- VHF(df[,"close"])
 
+df$weekday <- wday(df$full_date_time, getOption("lubridate.week.start", 1))
+df$monthday <- mday(df$full_date_time)
+df$yearday <- yday(df$full_date_time)
 
 
 
@@ -269,8 +280,11 @@ df$vhf.close <- VHF(df[,"close"])
 # test_data <- df[full_date_time >= "2020-11-07 13:00:00 CET"]
 df$pos <- as.factor(df$pos)
 df$id <- as.factor(df$id)
-train_data <- df[full_date_time < "2020-06-01 00:00:00", ]
-test_data <- df[full_date_time >= "2020-06-01 00:00:00", ]
+# train_data <- df[full_date_time < "2020-06-01 00:00:00", ]
+# test_data <- df[full_date_time >= "2020-06-01 00:00:00", ]
+dim(df)
+train_data <- df[1:20000, ]
+test_data <- df[20001:nrow(df), ]
 
 
 
@@ -293,15 +307,15 @@ train_data <- train_data[, ..predictors]
 model <- randomForest(fmla,
                         data = na.omit(train_data), 
                       importance = T,
-                      ntree = 200, do.trace = T)
+                      ntree = 500, do.trace = T, mtry = 70)
 
-model <- svm(fmla,
-                      data = na.omit(train_data))
-plot(model)
+# model <- svm(fmla,
+#                       data = na.omit(train_data))
+# plot(model)
 
-summary(model)
-names(model)
-model$confusion
+# summary(model)
+# names(model)
+# model$confusion
 
 # imp_df <- as.data.frame(?importance(model))
 # imp_df$IncNodePurity <- round(imp_df$IncNodePurity, 2)
@@ -316,11 +330,9 @@ model$confusion
 # 
 
 fit1 <- predict(model, test_data)
-View(test_data)
 
 eval1 <- cbind(test_data, fit1)
 eval1 <- eval1[, -..vars]
-View(eval1)
 # eval1$movement_fit <- round(((eval1$fit1 - eval1$close) / eval1$fit1 )*100, 3)
 # eval1$enter_fit[eval1$movement_fit > 1] <- 1
 # eval1$profits_fit <- eval1$enter_fit * eval1$returns
@@ -331,6 +343,17 @@ eval1$profits_fit <- NA
 eval1$profits_fit[eval1$fit1 == "enter"] <-  eval1$returns[eval1$fit1 =="enter"]
 sum(eval1$profits_fit, na.rm = T)/sum(eval1$profits_opt, na.rm = T)
 sum(eval1$profits_fit, na.rm = T)
+View(eval1)
+
+act <- ggplot(data = eval1, aes(x = full_date_time, y = close, colour=(pos == "enter")))+
+       geom_line(aes(group=1))
+
+fitted <- ggplot(data = eval1, aes(x = full_date_time, y = close, colour=(fit1 == "enter")))+
+          geom_line(aes(group=1))
+
+library(gridExtra)
+grid.arrange(act, fitted)
+
 # plot(density(eval1$profits_fit[!is.na(eval1$profits_fit)]))
 # mean(eval1$profits_fit[!is.na(eval1$profits_fit)])
 [1] 449.4

@@ -9,7 +9,7 @@ candles_recent <- as.data.table(klines[[1]])
 # 
 # training data here is not the traditional training set, but more of a 
 # placeholder initial dataset to calculate the indicators
-train_n <- ceiling(nrow(candles_recent) / 30)
+train_n <- ceiling(nrow(candles_recent) / 10)
 
 train_data <- candles_recent[1:train_n, ]
 
@@ -36,6 +36,9 @@ myresult <- Pure_RSI_Volume_Trailing(RSI_Period=10,
                          RSI_below=20, EMA_volume=10,
                                      takeprofit=0.02, stoploss_trail=10000,stoploss_ult=0.04,
                                      times_vol=0, plot.it=T)
+
+myresult <- trend_obv(obv_ema=120, sma_ema=120, takeprofit=0.03,stoploss_ult=0.02, plot.it=TRUE)
+View(myresult)
 # myresult <- splines_fast_slow_cross_eff(spar_fast = 0.1, spar_slow = 0.6)
 # df <- myresult
 # df$returns <- c(lag(diff(df$close)), 0)
@@ -68,7 +71,7 @@ myresult <- Pure_RSI_Volume_Trailing(RSI_Period=10,
 #                  "bullish")
 
 
-myresult <- cross_EMA_stoploss_trail_simple(slow_SMA= 180,takeprofit=0.01, stoploss_trail=0.02,stoploss_ult=0.01)
+myresult <- cross_EMA_stoploss_trail_simple(slow_SMA= 180,takeprofit=0.03, stoploss_trail=0.02,stoploss_ult=0.01)
   
   
 calculate_profits(myresult)

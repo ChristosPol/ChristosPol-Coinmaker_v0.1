@@ -39,7 +39,7 @@ par(bg = 'grey')
 
 for (i in 1:length(EUR_pairs)){
   msg <- tryCatch({
-  df <- simple_OHLC(interval = 60, pair = EUR_pairs[i])
+  df <- simple_OHLC(interval = 240, pair = EUR_pairs[i])
   
   df$sharpe <- mean(diff(df$close)) / sd(df$close)
   
@@ -50,13 +50,22 @@ for (i in 1:length(EUR_pairs)){
   # df[, deriv := predict(smoothingSpline, deriv = 1)$y]
   smoothingSpline = smooth.spline(df[, close] ~ as.numeric(rownames(df)) , spar = spar_slow)
   df[, spline_slow := predict(smoothingSpline)$y]
+  df$obv <- OBV(df[, "close"], df[, "volume"])
+  df$EMA_OBV <- EMA(df$obv, n =50)
   
   p1 <- ggplot(data= df, aes(x=x, y=close)) +
     geom_line(alpha = 0.7) +
     geom_line(aes(x = x, y = spline_fast), color ="red") +
     geom_line(aes(x = x, y = spline_slow), color ="blue") +
     ggtitle(label =paste0("Sharpe = ", round(tail(df$sharpe, 1), 3), " pair = ",EUR_pairs[i]  ))
-  print(p1)
+  
+  p2 <- ggplot(data = df, aes(x =x , y = obv))+
+    geom_line(alpha = 0.8)+
+    geom_line(aes(x = x, y = EMA_OBV), color ="red")
+
+  print(grid.arrange(p1, p2, 
+               ncol = 1, nrow = 2))
+  
   # p2 <- ggplot(data = df, aes(x=x, y = deriv)) +
   #   geom_line(color ="red", size = 0.7)+ geom_hline(yintercept=0, size =0.2)
   # 
@@ -94,7 +103,6 @@ for (i in 1:length(EUR_pairs)){
   Sys.sleep(3)
   
 }
-
 
 names(value_price) <- EUR_pairs
 

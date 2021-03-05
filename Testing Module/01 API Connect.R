@@ -1,5 +1,5 @@
 # Preamble ---------------------------------------------------------------------
-# screen -S pullingBTC R
+# screen -S pullingETH R
 .rs.restartR()
 rm(list = ls())
 ### retire this git, go to binance
@@ -11,11 +11,11 @@ sapply(files.sources, source)
 
 # Choose which unix time to use for pulling data
 # Choose from ["start_of_time", "manually", "latest_available"]
-unix_time <- "latest_available"
+unix_time <- "manually"
 
 # Choose any pair to pull
-# pair <- "XETHZEUR"
-pair <- "BTCEUR"
+pair <- "XETHZEUR"
+# pair <- "ETHEUR"
 # pair <- "ALGOEUR"
 # pair <- "KAVAEUR"
 # pair <- "GNOEUR"
@@ -33,7 +33,7 @@ pair_data_results <- paste(data_path, pair, sep ="/")
 # Select initial id based on unix_time arg
 if (unix_time == "start_of_time") {
   initial_id <- 0
-} else if (unix_time == "manually") {
+} else if (unix_time == "latest_available") {
   # select number of days starting from todays date
   options("width" = 60)
   v <- nanotime(Sys.time() - as.difftime(1095, unit = "days"))

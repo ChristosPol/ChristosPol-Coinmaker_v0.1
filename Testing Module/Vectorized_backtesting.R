@@ -4,23 +4,26 @@ df <- klines[[1]]
 
 # Exhaustive search of best curves
 EMA_fast <- data.frame(EMA_fast = seq(5, 350, 5), flag = 1)
-EMA_slow <- data.frame(EMA_slow = seq(5, 500, 5), flag = 1)
-testing_params <- left_join(EMA_fast, EMA_slow)
-testing_params <- subset(testing_params,
-                         testing_params$EMA_slow > testing_params$EMA_fast)
-testing_params$flag <- NULL
+testing_params <- EMA_fast
+# EMA_slow <- data.frame(EMA_slow = seq(5, 500, 5), flag = 1)
+# testing_params <- left_join(EMA_fast, EMA_slow)
+# testing_params <- subset(testing_params,
+                         # testing_params$EMA_slow > testing_params$EMA_fast)
+# testing_params$flag <- NULL
 testing_params <- as.data.table(testing_params)
 
 ggplot(data= df, aes(x=full_date_time, y=close)) +
   geom_line(alpha = 0.5)
-leverage <- 1
+leverage <- 0.03
 prof <- c()
 for (i in 1:nrow(testing_params)){
   
-  df$EMA_fast <- EMA(df$close, n = testing_params$EMA_fast[i])
-  df$EMA_slow <- EMA(df$close, n = testing_params$EMA_slow[i])
+  df$OBV <-  OBV(df[, "close"], df[, "volume"])
+  df$OBV_EMA <- EMA(df$OBV, n = testing_params$EMA_fast[i])
+  # df$EMA_fast <- EMA(df$close, n = testing_params$EMA_fast[i])
+  # df$EMA_slow <- EMA(df$close, n = testing_params$EMA_slow[i])
   df$returns <- c(lag(diff(df$close)), 0)
-  df$actions <- ifelse(df$EMA_fast > df$EMA_slow, leverage, 0)
+  df$actions <- ifelse(df$OBV > df$OBV_EMA, leverage, 0)
   df$position <- lag(df$action)
   df$profits <- df$returns * df$position
   runs <- rle(df$actions)
@@ -43,8 +46,8 @@ segment_sell <- df[signal == 0, ]
 
 ggplot(data= df, aes(x=full_date_time, y=close)) +
   geom_line(alpha = 0.5)+
-  geom_line(aes(x=full_date_time, y=EMA_fast), color ="red", size = 0.2)+
-  geom_line(aes(x=full_date_time, y=EMA_slow), color ="green", size = 0.2)+
+  # geom_line(aes(x=full_date_time, y=EMA_fast), color ="red", size = 0.2)+
+  # geom_line(aes(x=full_date_time, y=EMA_slow), color ="green", size = 0.2)+
   geom_point(data = segment_buy, aes(x=full_date_time, y=close),
              color ="green", size = 1)+
   geom_point(data = segment_sell, aes(x=full_date_time, y=close),

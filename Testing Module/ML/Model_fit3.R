@@ -248,9 +248,9 @@ df <- cbind(df, tdi)
 
 df$vhf.close <- VHF(df[,"close"])
 
-
-
-
+df$weekday <- wday(df$full_date_time, getOption("lubridate.week.start", 1))
+df$monthday <- mday(df$full_date_time)
+df$yearday <- yday(df$full_date_time)
 
 # df$pos <- as.factor(df$pos)
 
@@ -261,6 +261,9 @@ df$vhf.close <- VHF(df[,"close"])
 # df$id <- as.factor(df$id)
 train_data <- df[full_date_time < "2020-08-20 00:00:00", ]
 test_data <- df[full_date_time >= "2020-08-20 00:00:00", ]
+
+train_data <- df[1:8500, ]
+test_data <- df[8501:nrow(df), ]
 
 # train_data <- df[full_date_time >= "2017-01-01 00:00:00" & full_date_time < "2020-08-20 00:00:00", ]
 # test_data <- df[full_date_time >= "2020-08-20 00:00:00", ]
@@ -290,7 +293,7 @@ train_data <- train_data[, ..predictors]
 model <- randomForest(fmla,
                       data = na.omit(train_data), 
                       importance = T,
-                      ntree = 200, do.trace = T, mtry = 80)
+                      ntree = 2000, do.trace = T, mtry = 80)
 model <- svm(fmla,
                       data = na.omit(train_data))
 
