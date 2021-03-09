@@ -14,8 +14,8 @@ sapply(files.sources, source)
 unix_time <- "manually"
 
 # Choose any pair to pull
-pair <- "XETHZEUR"
-# pair <- "ETHEUR"
+# pair <- "XETHZEUR"
+pair <- "ETHEUR"
 # pair <- "ALGOEUR"
 # pair <- "KAVAEUR"
 # pair <- "GNOEUR"
@@ -33,10 +33,10 @@ pair_data_results <- paste(data_path, pair, sep ="/")
 # Select initial id based on unix_time arg
 if (unix_time == "start_of_time") {
   initial_id <- 0
-} else if (unix_time == "latest_available") {
+} else if (unix_time == "manually") {
   # select number of days starting from todays date
   options("width" = 60)
-  v <- nanotime(Sys.time() - as.difftime(1095, unit = "days"))
+  v <- nanotime(Sys.time() - as.difftime(60, unit = "days"))
   initial_id <- as.integer64(v)
 } else {
   file <- paste0(pair_data_results, "/", pair, ".csv.gz")

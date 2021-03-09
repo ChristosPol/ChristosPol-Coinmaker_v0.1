@@ -56,7 +56,7 @@ plot_candlesticks <- function(dta, Ns, asset){
   plot(dta$low, main = "", axes = F, xlab = "", ylab = "", ylim = c(mn, mx), type = "n")
   segments(x0 = xs, y0 = dta$open, x1 = xs, y1 = dta$close, col = color_list, lwd = 4)
   segments(x0 = xs, y0= dta$low, x1 = xs, y1 = dta$high, col = color_list, lwd = 1)
-  axis(1, at = seq(1, max(xs), by =100), labels = substr(dta$Date_POSIXct[seq(1, max(xs), by =100)],1,10), las = 2)
+  axis(1, at = 1:length(dta$interval), las = 2)
 }
 
 # # Plot chart with SR lines and return values 

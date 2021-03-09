@@ -13,8 +13,8 @@ sapply(files.sources, source)
 unix_time <- "manually"
 
 # Choose any pair to pull
-pair <- "XETHZEUR"
-# pair <- "ETHEUR"
+# pair <- "XETHZEUR"
+pair <- "ETHEUR"
 # pair <- "ALGOEUR"
 # pair <- "KAVAEUR"
 # pair <- "GNOEUR"
@@ -41,8 +41,9 @@ frame <- fread(file)
 colnames(frame) <- c("price", "volume", "epoch_time", "buy_sell", "market_limit",
                      "last_id", "Date_POSIXct", "Time", "Date", "Hour")
 # frame1 <- subset(frame, frame$Date >= from_date & frame$Date < to_date)
-frame1 <- subset(frame, frame$Date_POSIXct >= "2021-02-26 07:00:00" &frame$Date_POSIXct <= "2021-02-26 10:00:00")
+frame1 <- subset(frame, frame$Date_POSIXct >= "2021-02-22 15:15:00" & frame$Date_POSIXct <= "2021-02-22 15:25:00")
 frame1 <- tail(frame, 10000)
+
 copied <- copy(frame1)
 
 trades <- data.table(current_price = NA,price_action = NA, at = NA, action = "no_action", pos_perc = NA,
@@ -51,7 +52,7 @@ all_trades <- data.table(current_price = NA, price_action = NA, at = NA, action 
                          tp = 0.01, exit = NA, signal = NA)
 for(i in 1:nrow(copied)){
 
-copied1 <- copied[1:(i+1000), ]
+copied1 <- copied[1:(i+2500), ]
 copied1[, interval := strftime(floor_date(as.POSIXct(Date_POSIXct), intervals),
                                format = '%Y-%m-%d %H:%M:%S')]
 copied1 <- copied1[, .(high = max(price), low = min(price), open = first(price),
@@ -61,7 +62,7 @@ copied1[, diff := ((copied1[, tail(close, 1)]- copied1[, tail(close, 2)][1]) / c
 
 signal <- copied1[, tail(diff, 1)] 
 
-if(signal < -3.5 & (all_trades[, tail(action, 1)] == "no_action"  | all_trades[, tail(action, 1)] == "sold")) {
+if(signal < -1 & (all_trades[, tail(action, 1)] == "no_action"  | all_trades[, tail(action, 1)] == "sold")) {
   
   trades[, "price_action"] <- copied1[, tail(close, 1)]
   trades[, "current_price"] <- copied1[, tail(close, 1)]
@@ -70,7 +71,7 @@ if(signal < -3.5 & (all_trades[, tail(action, 1)] == "no_action"  | all_trades[,
   trades[, "pos_perc"] <- ((all_trades[, tail(current_price, 1)]  - trades[, "price_action"] )/ all_trades[, tail(current_price, 1)] )*100
   # trades[, "exit"] <-  tail(trades[, "price_bought"],1) * tail(trades[, tp], 1) +  tail(trades[, "price_bought"],1) < tail(trades[, "price_bought"],1) 
   
-} else if (tail(all_trades[, "pos_perc"],1) > 3.20 &  all_trades[, tail(action, 1)] %in% c("long","keep") ){
+} else if (tail(all_trades[, "pos_perc"], 1) > 1 &  all_trades[, tail(action, 1)] %in% c("long","keep") ){
   trades[, "action"] <- "sold"
   trades[, "price_action"] <- all_trades[, tail(price_action, 1)]
   trades[, "current_price"] <- copied1[, tail(close, 1)]
@@ -78,7 +79,7 @@ if(signal < -3.5 & (all_trades[, tail(action, 1)] == "no_action"  | all_trades[,
   trades[, "pos_perc"] <- ((all_trades[, tail(current_price, 1)]  - trades[, "price_action"] )/ all_trades[, tail(current_price, 1)])*100
   # trades[, "pos_perc"] <-  (trades[, "price_bought"] - tail(copied1[, close], 1) )/ trades[, "price_bought"]
   # trades[, "pos_perc"] <-  (trades[, "price_bought"] - tail(copied1[, close], 1) )/ trades[, "price_bought"]
-} else if (all_trades[, tail(action, 1)] %in% c("long", "keep") & ( tail(all_trades[, "pos_perc"],1) < 3.20)  ) {
+} else if (all_trades[, tail(action, 1)] %in% c("long", "keep") & ( tail(all_trades[, "pos_perc"],1) < 1)  ) {
   
   trades[, "action"] <- "keep"
   trades[, "current_price"] <- copied1[, tail(close, 1)]
@@ -99,11 +100,33 @@ all_trades <- rbind(all_trades, trades)
 all_trades$signal[nrow(all_trades)] <-  signal
 # x <- ((copied1[, tail(close, 1)]- copied1[, tail(close, 2)][1]) / copied1[, tail(close, 1)])*100
 print(all_trades)
-# Sys.sleep(0.1)
-# plot_candlesticks(dta = copied1, Ns = nrow(copied1), asset = pair)
+Sys.sleep(0.1)
+plot_candlesticks(dta = copied1, Ns = nrow(copied1), asset = pair)
+
+plot_df <- all_trades[!is.na(all_trades$at)]
+
+
+if("long" %in% plot_df$action){
+  
+  
+  df_points_buy <- data.frame(x = which(na.omit(unique(copied1$interval)) %in% plot_df$at[plot_df$action == "long"]),
+                              y = plot_df$price_action[plot_df$action == "long"])
+}
+if("sold" %in% plot_df$action){
+  df_points_sell <- data.frame(x = which(unique(copied1$interval) %in% plot_df$at[plot_df$action == "sold"]),
+                              y = plot_df$current_price[plot_df$action == "sold"])
+}
+if(exists("df_points_buy")){
+  points(df_points_buy$x, df_points_buy$y, col = "blue", pch = 19)
+}
+if(exists("df_points_sell")){
+  points(df_points_sell$x, df_points_sell$y, col = "red", pch = 19)
+}
 # print(i)
 }
 View(all_trades)
+View(all_trades[action != "no_action",])
+View(all_trades[!action %in% c("no_action", "keep"),])
 
 candles[[i]] <- copied[, .(high = max(price), low = min(price), open = first(price),
                            close = last(price), volume = sum(volume)),
