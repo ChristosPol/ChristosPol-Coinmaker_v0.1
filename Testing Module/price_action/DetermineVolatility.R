@@ -61,6 +61,6 @@ decrease <- df[jump_enter < 0, ]
 
 mean_decrease <- mean(decrease[, jump_enter])
 median_decrease <- median(decrease[, jump_enter])
-hist(decrease[, jump_enter], breaks = 30)
+a<- hist(decrease[, jump_enter], breaks = 30)
 
 boxplot(decrease[, jump_enter])

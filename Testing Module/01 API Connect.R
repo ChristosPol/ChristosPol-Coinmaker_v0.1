@@ -11,7 +11,7 @@ sapply(files.sources, source)
 
 # Choose which unix time to use for pulling data
 # Choose from ["start_of_time", "manually", "latest_available"]
-unix_time <- "manually"
+unix_time <- "latest_available"
 
 # Choose any pair to pull
 # pair <- "XETHZEUR"

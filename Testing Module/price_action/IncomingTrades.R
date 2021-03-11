@@ -42,7 +42,7 @@ colnames(frame) <- c("price", "volume", "epoch_time", "buy_sell", "market_limit"
                      "last_id", "Date_POSIXct", "Time", "Date", "Hour")
 # frame1 <- subset(frame, frame$Date >= from_date & frame$Date < to_date)
 frame1 <- subset(frame, frame$Date_POSIXct >= "2021-02-22 15:15:00" & frame$Date_POSIXct <= "2021-02-22 15:25:00")
-frame1 <- tail(frame, 10000)
+frame1 <- tail(frame, 60000)
 
 copied <- copy(frame1)
 
@@ -62,7 +62,7 @@ copied1[, diff := ((copied1[, tail(close, 1)]- copied1[, tail(close, 2)][1]) / c
 
 signal <- copied1[, tail(diff, 1)] 
 
-if(signal < -1 & (all_trades[, tail(action, 1)] == "no_action"  | all_trades[, tail(action, 1)] == "sold")) {
+if(signal < -1.20 & (all_trades[, tail(action, 1)] == "no_action"  | all_trades[, tail(action, 1)] == "sold")) {
   
   trades[, "price_action"] <- copied1[, tail(close, 1)]
   trades[, "current_price"] <- copied1[, tail(close, 1)]
@@ -71,7 +71,7 @@ if(signal < -1 & (all_trades[, tail(action, 1)] == "no_action"  | all_trades[, t
   trades[, "pos_perc"] <- ((all_trades[, tail(current_price, 1)]  - trades[, "price_action"] )/ all_trades[, tail(current_price, 1)] )*100
   # trades[, "exit"] <-  tail(trades[, "price_bought"],1) * tail(trades[, tp], 1) +  tail(trades[, "price_bought"],1) < tail(trades[, "price_bought"],1) 
   
-} else if (tail(all_trades[, "pos_perc"], 1) > 1 &  all_trades[, tail(action, 1)] %in% c("long","keep") ){
+} else if ( (tail(all_trades[, "pos_perc"], 1) > 1.20 | tail(all_trades[, "pos_perc"], 1) < -3) &  all_trades[, tail(action, 1)] %in% c("long","keep") ){
   trades[, "action"] <- "sold"
   trades[, "price_action"] <- all_trades[, tail(price_action, 1)]
   trades[, "current_price"] <- copied1[, tail(close, 1)]
@@ -79,7 +79,7 @@ if(signal < -1 & (all_trades[, tail(action, 1)] == "no_action"  | all_trades[, t
   trades[, "pos_perc"] <- ((all_trades[, tail(current_price, 1)]  - trades[, "price_action"] )/ all_trades[, tail(current_price, 1)])*100
   # trades[, "pos_perc"] <-  (trades[, "price_bought"] - tail(copied1[, close], 1) )/ trades[, "price_bought"]
   # trades[, "pos_perc"] <-  (trades[, "price_bought"] - tail(copied1[, close], 1) )/ trades[, "price_bought"]
-} else if (all_trades[, tail(action, 1)] %in% c("long", "keep") & ( tail(all_trades[, "pos_perc"],1) < 1)  ) {
+} else if (all_trades[, tail(action, 1)] %in% c("long", "keep") & ( tail(all_trades[, "pos_perc"],1) < 1.20)  ) {
   
   trades[, "action"] <- "keep"
   trades[, "current_price"] <- copied1[, tail(close, 1)]
@@ -124,9 +124,20 @@ if(exists("df_points_sell")){
 }
 # print(i)
 }
+
 View(all_trades)
 View(all_trades[action != "no_action",])
-View(all_trades[!action %in% c("no_action", "keep"),])
+mytrades <- all_trades[!action %in% c("no_action", "keep"),]
+mytrades$id <- rep(1:7, each = 2)
+
+prof <- c()
+for(i in 1:length(unique(mytrades$id))){
+  
+prof[i] <-  mytrades$current_price[mytrades$action == "sold" & mytrades$id == i] -
+  mytrades$current_price[mytrades$action == "long" & mytrades$id == i]
+}
+
+sum(prof)
 
 candles[[i]] <- copied[, .(high = max(price), low = min(price), open = first(price),
                            close = last(price), volume = sum(volume)),
