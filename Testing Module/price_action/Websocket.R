@@ -1,5 +1,18 @@
+# Connect through the websocket of kraken to get live stream of prices
+screen -S websocket R
+
 library(websocket)
 library(RJSONIO)
+library(utils)
+
+# Choose pair and interval
+pair <- c("ETH/EUR", "ADA/EUR")
+interval = 60
+
+# Path to write values
+path <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Testing Module/price_action/current_values/"
+
+# Handler function
 poll_until_connected <- function(ws, timeout = 5) {
   connected <- FALSE
   end <- Sys.time() + timeout
@@ -24,31 +37,33 @@ poll_until_connected <- function(ws, timeout = 5) {
   }
 }
 
-quiet <- function(x) { 
-  sink(tempfile()) 
-  on.exit(sink()) 
-  invisible(force(x)) 
-} 
-
+# Create json to send
 x <- list( event = 'subscribe', pair  = as.array(pair),
            subscription = list(name="ohlc", interval = interval) )
 json <- toJSON(x, pretty = T )
 
-
-
+# Connect to websocket
 ws2 <- websocket::WebSocket$new("wss://ws.kraken.com/", autoConnect = FALSE) 
 
+# Action on message
 ws2$onMessage(function(event) {
   
   input_message <- jsonlite::fromJSON(event$data)
   
-  if(length(input_message) > 2) {
+  if(input_message[[1]][1] == 571) {
     
-    val <<- input_message[[2]][6]
+    write.csv(input_message[[2]][6], paste0(path ,"ETHEUR_","val.csv"))
+    print( paste0(input_message[[2]][6], " _ETHEUR"))
+  } else if (input_message[[1]][1] == 1483){
+    
+    write.csv(input_message[[2]][6], paste0(path ,"ADAEUR_","val.csv"))
+    print( paste0(input_message[[2]][6], " _ADAEUR"))
+    
   }
-
+  
 })
 
+# send the call
 ws2$connect()
 poll_until_connected(ws2)
 ws2$send(json)
