@@ -6,7 +6,7 @@ library(RJSONIO)
 library(utils)
 
 # Choose pair and interval
-pair <- c("ETH/EUR", "ADA/EUR")
+pair <- c("ETH/EUR", "ADA/EUR", "BTC/EUR", "DOT/EUR", "XRP/EUR", "LINK/EUR", "LTC/EUR")
 interval = 60
 
 # Path to write values
@@ -49,18 +49,29 @@ ws2 <- websocket::WebSocket$new("wss://ws.kraken.com/", autoConnect = FALSE)
 ws2$onMessage(function(event) {
   
   input_message <- jsonlite::fromJSON(event$data)
-  
-  if(input_message[[1]][1] == 571) {
-    
+  # print(input_message)
+  if (input_message[[1]][1] == 571) {
     write.csv(input_message[[2]][6], paste0(path ,"ETHEUR_","val.csv"))
     print( paste0(input_message[[2]][6], " _ETHEUR"))
   } else if (input_message[[1]][1] == 1483){
-    
     write.csv(input_message[[2]][6], paste0(path ,"ADAEUR_","val.csv"))
     print( paste0(input_message[[2]][6], " _ADAEUR"))
-    
+  } else if (input_message[[1]][1] == 347){
+    write.csv(input_message[[2]][6], paste0(path ,"BTCEUR_","val.csv"))
+    print( paste0(input_message[[2]][6], " _BTCEUR"))
+  } else if (input_message[[1]][1] == 2955){
+    write.csv(input_message[[2]][6], paste0(path ,"DOTEUR_","val.csv"))
+    print( paste0(input_message[[2]][6], " _DOTEUR"))
+  } else if (input_message[[1]][1] == 923){
+    write.csv(input_message[[2]][6], paste0(path ,"XRPEUR_","val.csv"))
+    print( paste0(input_message[[2]][6], " _XRPEUR"))
+  } else if (input_message[[1]][1] == 1995){
+    write.csv(input_message[[2]][6], paste0(path ,"LINKEUR_","val.csv"))
+    print( paste0(input_message[[2]][6], " _LINKEUR"))
+  } else if (input_message[[1]][1] == 443){
+    write.csv(input_message[[2]][6], paste0(path ,"LTCEUR_","val.csv"))
+    print(paste0(input_message[[2]][6], " _LTCEUR"))
   }
-  
 })
 
 # send the call

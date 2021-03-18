@@ -9,7 +9,7 @@ path <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Testing Module/p
 cmd <- cron_rscript(paste0(path, "GetOHLC.R"))
 
 # add frequency and intervals
-cron_add(cmd, frequency = '*/1 * * * *', id = 'GETOHLC', description = 'GETOHLC', at = '01:27')
+cron_add(cmd, frequency = '*/2 * * * *', id = 'GETOHLC', description = 'GETOHLC', at = '01:33')
 
 # Check all jobs
 cron_ls()

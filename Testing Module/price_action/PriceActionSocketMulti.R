@@ -9,18 +9,25 @@ path_values <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Testing M
 path_ohlc <- "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Testing Module/price_action/ohlc/"
 
 # Choose pair and interval
-pair <- c("ETH/EUR", "ADA/EUR")
+pair <- c("ETH/EUR", "ADA/EUR", "BTC/EUR", "DOT/EUR", "XRP/EUR", "LINK/EUR", "LTC/EUR")
+vol <- c(0.018, 25, 0.0005, 0.92, 71, 1, 0.16)
 interval = 60
+
+# API info
+api_info <- read.table(paste("/media/chris/DATA/Documents/Bot_Trading", "API_Keys.txt", sep = "/"), sep = ";", header = T)
+API_Key <- as.character(api_info$API_Key)
+API_Sign <- as.character(api_info$API_Sign)
+
 
 # Initiate websocket stream --- In screen
 # source("Websocket.R")
 
-trades <- data.table(current_price = as.numeric(c(NA, NA)), price_action = as.numeric(c(NA, NA)), at = c(Sys.time(),Sys.time()),
-                     action = c("no_action", "no_action"), pos_perc = as.numeric(c(NA, NA)),
-                     exit = c(NA, NA), signal = c(NA, NA), pair  = pair)
-all_trades <- data.table(current_price = as.numeric(c(NA, NA)), price_action = as.numeric(c(NA, NA)), at = c(Sys.time(),Sys.time()),
-                         action = c("no_action", "no_action"), pos_perc = as.numeric(c(NA, NA)),
-                         exit = c(NA, NA), signal = c(NA, NA), pair  = pair)
+trades <- data.table(current_price = as.numeric(rep(NA, length(pair))), price_action = as.numeric(rep(NA, length(pair))), at = rep(Sys.time(), length(pair)),
+                     action = rep("no_action", length(pair)), pos_perc = as.numeric(rep(NA, length(pair))),
+                     exit = rep(NA, length(pair)), signal = rep(NA, length(pair)), pair  = pair)
+all_trades <- data.table(current_price = as.numeric(rep(NA, length(pair))), price_action = as.numeric(rep(NA, length(pair))), at = rep(Sys.time(), length(pair)),
+                         action = rep("no_action", length(pair)), pos_perc = as.numeric(rep(NA, length(pair))),
+                         exit = rep(NA, length(pair)), signal = rep(NA, length(pair)), pair  = pair)
 
 repeat{
   
@@ -34,10 +41,14 @@ repeat{
       val <- read.csv(paste0(path_values, gsub("/", "", pair[i]) ,"_val.csv"))
       val <- val$x
       signal <- ((val - last_close) / val) * 100
-      # signals[i, "pair"] <- pair[i]
-      # signals[i, "signal"] <- signal
+
     
-      if(signal < -1.5 & (all_trades[pair == pair[i], tail(action, 1)] == "no_action"  | all_trades[pair == pair[i], tail(action, 1)] == "sold")) {
+      if(signal < -3 & (all_trades[pair == pair[i], tail(action, 1)] == "no_action"  | all_trades[pair == pair[i], tail(action, 1)] == "sold")) {
+        
+        # Give API Order to buy at market
+        buy_it <- add_market_order(url = "https://api.kraken.com/0/private/AddOrder",
+                                   key = API_Key, secret = API_Sign, pair = pair[i], type = "buy",
+                                   ordertype = "market", volume = vol[i])
         
         trades[pair == pair[i], "price_action"] <- val
         trades[pair == pair[i], "current_price"] <- val
@@ -45,7 +56,12 @@ repeat{
         trades[pair == pair[i], "action"] <- "long"
         trades[pair == pair[i], "pos_perc"] <- 0
         
-      } else if ((tail(all_trades[pair == pair[i], "pos_perc"], 1) > 1 | tail(all_trades[pair == pair[i], "pos_perc"], 1) < -1.5) &  all_trades[pair == pair[i], tail(action, 1)] %in% c("long","keep") ){
+      } else if ((tail(all_trades[pair == pair[i], "pos_perc"], 1) > 2 | tail(all_trades[pair == pair[i], "pos_perc"], 1) < -3) &  all_trades[pair == pair[i], tail(action, 1)] %in% c("long","keep") ){
+        
+        # # Give API Order to buy at market
+        sell_it <- add_market_order(url = "https://api.kraken.com/0/private/AddOrder",
+                                    key = API_Key, secret = API_Sign, pair = pair[i], type = "sell",
+                                    ordertype = "market", volume = vol[i])
         
         trades[pair == pair[i], action := "sold"]
         trades[pair == pair[i], price_action := all_trades[pair == pair[i], tail(price_action, 1)]]
@@ -53,7 +69,7 @@ repeat{
         trades[pair == pair[i], at := Sys.time()]
         trades[pair == pair[i], pos_perc := ((all_trades[pair == pair[i], tail(current_price, 1)]  - trades[pair == pair[i], "price_action"] )/ all_trades[pair == pair[i], tail(current_price, 1)])*100] 
         
-      } else if (all_trades[pair == pair[i], tail(action, 1)] %in% c("long", "keep") & ( tail(all_trades[pair == pair[i], "pos_perc"],1) < 1)  ) {
+      } else if (all_trades[pair == pair[i], tail(action, 1)] %in% c("long", "keep") & ( tail(all_trades[pair == pair[i], "pos_perc"],1) < 2)  ) {
         
         trades[pair == pair[i], action := "keep"]
         trades[pair == pair[i], current_price := val]
@@ -75,10 +91,15 @@ repeat{
     
     }
     
+    mytrades <- all_trades[action %in% c("long", "sold")]
+    if(nrow(mytrades) > 1){
+      write.csv(mytrades, "trades.csv")  
+    }
+    
   }, error = function(e) { return(NA) })
   print(all_trades)
-  Sys.sleep(1)
+  Sys.sleep(2)
+  
 }
 # Close websocket connection
 ws2$close()
-
