@@ -5,7 +5,7 @@ ticks <- c(5, 60, 2, 4, 6, 12, 24)
 units <- c(rep("minutes", 2), rep("hours", 5))
 
 # Or choose a single one
-ticks <- c(60)
+ticks <- c(5)
 units <- c(rep("minutes", 1))
 intervals <- paste(ticks, units, sep = " ")
 

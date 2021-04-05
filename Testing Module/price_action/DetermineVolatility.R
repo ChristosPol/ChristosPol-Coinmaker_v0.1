@@ -10,57 +10,74 @@ files.sources = list.files(path_source, full.names = T)
 sapply(files.sources, source)
 
 # Choose any pair to pull
-pair <- "XETHZEUR"
-pair <- "ETHEUR"
-# pair <- "ALGOEUR"
-# pair <- "KAVAEUR"
-# pair <- "GNOEUR"
-# pair <- "ADAEUR"
-# pair <- "STORJEUR"
-# Path to save results
-data_path <- "/media/chris/DATA/Documents/Bot_Trading/Historical_data"
+pair <- c("OXT/EUR")
+ticks <- c(240)
 
-# Create pair directory
-dir.create(paste(data_path, pair, sep ="/"), showWarnings = FALSE)
+str_right <- function(string, n) {
+  substr(string, nchar(string) - (n - 1), nchar(string))
+}
+result <- list()
 
-# Fix path
-pair_data_results <- paste(data_path, pair, sep ="/")
+for(i in 1:length(pair)){
 
 # Loading Data for operations --------------------------------------------------
 
-# Or choose a single one
-ticks <- c(60)
-units <- c(rep("minutes", 1))
-intervals <- paste(ticks, units, sep = " ")
-
-# Load trades and conver to OHLC, applies filtering
-klines <- trades_to_OHLC(pair = pair,
-                         interval = intervals,
-                         from_date = "2018-01-01",
-                         to_date = "2020-12-10",
-                         date_subset = F)
-names(klines) <- gsub(" ", "_", intervals)
-
-# Get a first visual
-df <- klines[[1]]
-fig <- df %>% plot_ly(x = ~full_date_time , type="candlestick",
-                      open = ~open, close = ~close,
-                      high = ~high, low = ~low) 
-fig <- fig %>% layout(title = pair,
-                      xaxis = list(rangeslider = list(visible = F)))
-fig
+OHLC <- simple_OHLC(ticks, pair[i])
+df <- copy(OHLC)
 
 # Determine volatility
-next_l <- c(df$low[-1], 0)
-df[, next_low := next_l]
-df[, jump_enter := round( ((next_low - close)/close)*100, 4)]
+# next_c <- c(0, df$close[-nrow(df)])
+# df[, next_close := next_c]
+df[, o_l:= round(((low - open)/open)*100, 3)]
+df[, o_c:= round(((close - open)/open)*100, 3)]
+df[, o_h:= round(((high - open)/open)*100, 3)]
 
-df <- df[-nrow(df), ]
+# df[, jump_enter := round( ((low-next_close)/next_close)*100, 4)]
+# df <- df[-1, ]
 
-decrease <- df[jump_enter < 0, ]
+# df$exit_close <- round(((df$high - df$low)/ df$close) * 100,4)
 
-mean_decrease <- mean(decrease[, jump_enter])
-median_decrease <- median(decrease[, jump_enter])
-a<- hist(decrease[jump_enter>-11, jump_enter], breaks = 30)
+# df_trades <- df[jump_enter <=-2, ]
+# df_trades$jump_enter_cat <- NA
+# df_trades$jump_enter_cat[df_trades$jump_enter > -3] <- "2-3"
+# df_trades$jump_enter_cat[df_trades$jump_enter > -4 & df_trades$jump_enter <= -3] <- "3-4"
+# df_trades$jump_enter_cat[df_trades$jump_enter > -5 & df_trades$jump_enter <= -4] <- "4-5"
+# df_trades$jump_enter_cat[df_trades$jump_enter > -6 & df_trades$jump_enter <= -5] <- "5-6"
+# df_trades$jump_enter_cat[df_trades$jump_enter > -7 & df_trades$jump_enter <= -6] <- "6-7"
+# df_trades$jump_enter_cat[df_trades$jump_enter <= -7] <- "7plus"
+df_trades <- copy(df)
+View(df_trades)
 
-boxplot(decrease[, jump_enter])
+box_perc <- boxplot(df_trades$jump_enter)
+bounds <- c(box_perc$stats[1], box_perc$stats[1] + 1)
+df_trades$jump_enter_cat <- NA
+df_trades$jump_enter_cat[df_trades$jump_enter <= bounds[2] & df_trades$jump_enter >= bounds[1]] <- "selected_enter"
+df_trades$jump_enter_cat[is.na(df_trades$jump_enter_cat)] <- "selected_non_enter"
+
+res <- df_trades[, list(median(exit_close), .N), by = jump_enter_cat]
+# res[, prof := (V1*N) - 0.026*N]
+
+# res <- res[jump_enter_cat != "7plus", ]
+# setorder(res, -prof)
+
+# res[, signal := str_right(jump_enter_cat, 1)]
+# res[, tp := V1]
+res[, pair := pair[i]]
+res[, signal := box_perc$stats[1]]
+# res[, box := box_perc$stats[1]]
+res[, sl := (signal - box_perc$stats[1])*-1]
+setnames(res, "V1", "tp")
+
+result[[i]] <- res[jump_enter_cat =="selected_enter", ] 
+Sys.sleep(10)
+print(pair[i])
+}
+
+params <- do.call(rbind, result)
+write.csv(params, "/media/chris/DATA/Documents/Bot_Trading/Coinmaker_v0.1/Testing Module/price_action/params.csv")
+
+# decrease <- df[jump_enter < 0, ]
+# mean_decrease <- mean(decrease[, jump_enter])
+# median_decrease <- median(decrease[, jump_enter])
+# a <- hist(decrease[jump_enter>-11, jump_enter], breaks = 30)
+# boxplot(decrease[, jump_enter])
